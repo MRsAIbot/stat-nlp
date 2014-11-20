@@ -55,3 +55,6 @@ target/
 
 # PDF documents
 *.pdf
+
+# Data file
+bionlp2011genia-train-clean/
