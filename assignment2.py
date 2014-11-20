@@ -20,7 +20,7 @@ def loadJSONfile(fileName):
 		return d
 
 def main():
-	# Just test my functions a bit
+	# Just testing my functions a bit
 	listOfFiles = listFiles()
 	print listOfFiles[0]
 	f1 = loadJSONfile(listOfFiles[0])
