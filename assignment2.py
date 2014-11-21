@@ -22,9 +22,9 @@ def loadJSONfile(fileName):
 def main():
 	# Just testing my functions a bit
 	listOfFiles = listFiles()
-	print listOfFiles[0]
+	print (listOfFiles[0])
 	f1 = loadJSONfile(listOfFiles[0])
-	pprint(f1)
+	pprint(len(f1['sentences']))
 
 if __name__ == '__main__':
 	main()
