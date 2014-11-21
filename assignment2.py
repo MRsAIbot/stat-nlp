@@ -12,36 +12,36 @@ TO DO
 """
 
 # Create a list of .json file names
-def listFiles(path="./bionlp2011genia-train-clean/*.json"):
+def list_files(path="./bionlp2011genia-train-clean/*.json"):
 	return glob.glob(path)
 
 # Opens and loads a single json file name and returns it
-def loadJSONfile(fileName):
-	with open(fileName) as rawJSON:
-		d = json.load(rawJSON)
+def load_json_file(file_name):
+	with open(file_name) as raw_json:
+		d = json.load(raw_json)
 		return d
 
 # Returns a dictionary with a count of all triggers
-def getAllTriggers(fileList):
-	triggerDict = defaultdict(int)
-	for f in fileList:
-		fJSON = loadJSONfile(f)
-		for i in range(len(fJSON['sentences'])):
-			triggerList = fJSON['sentences'][i]['eventCandidates']
-			for trigger in triggerList:
-				triggerDict[trigger['gold']] += 1
+def get_all_triggers(file_list):
+	trigger_dict = defaultdict(int)
+	for f in file_list:
+		f_json = load_json_file(f)
+		for i in range(len(f_json['sentences'])):
+			trigger_list = f_json['sentences'][i]['eventCandidates']
+			for trigger in trigger_list:
+				trigger_dict[trigger['gold']] += 1
 
-	return triggerDict
+	return trigger_dict
 
 def main():
 	# Just testing my functions a bit
-	listOfFiles = listFiles()
-	print (listOfFiles[0])
-	f1 = loadJSONfile(listOfFiles[0])
+	list_of_files = list_files()
+	print (list_of_files[0])
+	f1 = load_json_file(list_of_files[0])
 	pprint(len(f1['sentences']))
 
 	# Finding and counting all event triggers
-	t = getAllTriggers(listOfFiles)
+	t = get_all_triggers(list_of_files)
 	print("Number of distinct event triggers: {0}".format(len(t.keys())))
 	pprint(t)
 
