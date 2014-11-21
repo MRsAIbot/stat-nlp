@@ -30,3 +30,8 @@ git checkout master
 git branch -D feature-or-fix-description
 git pull origin master
 ```
+
+Python Style Conventions
+------------------
+
+We adhere to the Python styling conventions as outlined by the <small>Source: [Google Python Style Guide](https://google-styleguide.googlecode.com/svn/trunk/pyguide.html)</small>
