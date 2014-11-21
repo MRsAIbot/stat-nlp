@@ -34,4 +34,4 @@ git pull origin master
 Python Style Conventions
 ------------------
 
-We adhere to the Python styling conventions as outlined by the <small>Source: [Google Python Style Guide](https://google-styleguide.googlecode.com/svn/trunk/pyguide.html)</small>
+We adhere to the Python styling conventions as outlined by the <small>[Google Python Style Guide](https://google-styleguide.googlecode.com/svn/trunk/pyguide.html)</small>
