@@ -40,10 +40,9 @@ def main():
 	f1 = loadJSONfile(listOfFiles[0])
 	pprint(len(f1['sentences']))
 
+	# Finding and counting all event triggers
 	t = getAllTriggers(listOfFiles)
-
 	print("Number of distinct event triggers: {0}".format(len(t.keys())))
-
 	pprint(t)
 
 
