@@ -1,6 +1,8 @@
 import glob
 import json
 import nltk
+import pickle # Not used yet, but might be useful later
+from collections import defaultdict
 from pprint import pprint
 
 """
@@ -19,12 +21,30 @@ def loadJSONfile(fileName):
 		d = json.load(rawJSON)
 		return d
 
+# Returns a dictionary with a count of all triggers
+def getAllTriggers(fileList):
+	triggerDict = defaultdict(int)
+	for f in fileList:
+		fJSON = loadJSONfile(f)
+		for i in range(len(fJSON['sentences'])):
+			triggerList = fJSON['sentences'][i]['eventCandidates']
+			for trigger in triggerList:
+				triggerDict[trigger['gold']] += 1
+
+	return triggerDict
+
 def main():
 	# Just testing my functions a bit
 	listOfFiles = listFiles()
 	print (listOfFiles[0])
 	f1 = loadJSONfile(listOfFiles[0])
 	pprint(len(f1['sentences']))
+
+	# Finding and counting all event triggers
+	t = getAllTriggers(listOfFiles)
+	print("Number of distinct event triggers: {0}".format(len(t.keys())))
+	pprint(t)
+
 
 if __name__ == '__main__':
 	main()
