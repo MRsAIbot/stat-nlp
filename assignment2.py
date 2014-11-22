@@ -32,19 +32,49 @@ def get_all_triggers(file_list):
 				trigger_dict[trigger['gold']] += 1
 
 	return trigger_dict
+ 
+#Returns a dictionary with a count of all arguments (=labels of the relations)
+def get_all_arguments(file_list):
+    argument_dict = defaultdict(int)
+    for f in file_list:
+        f_json = load_json_file(f)
+        for sentence in f_json['sentences']:
+            event_candidates_list = sentence['eventCandidates']
+            for event_candidates in event_candidates_list:
+                arguments_list = event_candidates['arguments']
+                
+                for argument in arguments_list:
+                    argument_dict[argument['gold']] += 1
+    return argument_dict
+    
+
+    
+    
+    
 
 def main():
-	# Just testing my functions a bit
-	list_of_files = list_files()
-	print (list_of_files[0])
-	f1 = load_json_file(list_of_files[0])
-	pprint(len(f1['sentences']))
-
-	# Finding and counting all event triggers
-	t = get_all_triggers(list_of_files)
-	print("Number of distinct event triggers: {0}".format(len(t.keys())))
-	pprint(t)
+    # Just testing my functions a bit
+    list_of_files = list_files()
+    print (list_of_files[0])
+    f1 = load_json_file(list_of_files[0])
+    pprint(len(f1['sentences']))
+        
+    # Finding and counting all event triggers
+    #t = get_all_triggers(list_of_files)
+    print("Number of distinct event triggers: {0}".format(len(t.keys())))
+    pprint(t)
+    
+    # Finding and counting all possible arguments (=relationship labels)
+    arg = get_all_arguments(list_of_files)
+    print("Number of relation arguments: {0}".format(len(arg.keys())))
+    pprint(arg)
 
 
 if __name__ == '__main__':
-	main()
+    main()
+
+
+
+
+
+
