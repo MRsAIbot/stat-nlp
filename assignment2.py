@@ -50,7 +50,6 @@ def get_all_arguments(file_list):
 
     
     
-    
 
 def main():
     # Just testing my functions a bit
