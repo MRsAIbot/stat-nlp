@@ -21,7 +21,7 @@ def loadJSONfile(fileName):
 		return d
 
 # Instantiating the feature vector class (creating a dict of feature vectors)
-f_v = feature_vector.FeatureVector()
+f_v = feature_vector.FeatureVector(feature_vector.list_a)
 
 def main():
 	# Just testing my functions a bit
@@ -31,9 +31,8 @@ def main():
 	pprint(len(f1['sentences']))
 
 	# Testing code Feature Vector functionality
-	f_v[('test','Regulation')] =1
-	print (f_v)
-	print (f_v['missing key'])
+	print(f_v.get_vector(3,4))
+
 
 if __name__ == '__main__':
 	main()
