@@ -29,7 +29,7 @@ def main():
 	print (listOfFiles[0])
 	f1 = loadJSONfile(listOfFiles[0])
 	pprint(len(f1['sentences']))
-
+ 
 	# Testing code Feature Vector functionality
 	print(f_v.get_vector(3,4))
 
