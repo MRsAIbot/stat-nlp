@@ -59,9 +59,9 @@ def main():
     pprint(len(f1['sentences']))
         
     # Finding and counting all event triggers
-    # t = get_all_triggers(list_of_files)
-    # print("Number of distinct event triggers: {0}".format(len(t.keys())))
-    # pprint(t)
+    t = get_all_triggers(list_of_files)
+    print("Number of distinct event triggers: {0}".format(len(t.keys())))
+    pprint(t)
     
     # Finding and counting all possible arguments (=relationship labels)
     arg = get_all_arguments(list_of_files)
