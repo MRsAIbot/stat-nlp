@@ -69,24 +69,24 @@ def main():
 	print("Number of relation arguments: {0}".format(len(arg.keys())))
 	pprint(arg)
 
-    list_a = []
-    list_a.append(feature_vector.phi_alternative_0)
-    list_a.append(feature_vector.phi_alternative_1)
+	# Test of sparse vectors
+	list_a = []
+	list_a.append(feature_vector.phi_alternative_0)
+	list_a.append(feature_vector.phi_alternative_1)
 
-    if 1:
-        listOfFiles = list_files()
-        f1 = load_json_file(listOfFiles[0])
-        sentence = f1['sentences'][0]   #pick first sentence
-        token_index = 0 #first word in sentence
+	listOfFiles = list_files()
+	f1 = load_json_file(listOfFiles[0])
+	sentence = f1['sentences'][0]   #pick first sentence
+	token_index = 0 #first word in sentence
 
-        grammar_dict = feature_vector.identify_all_grammar_tags(listOfFiles)   
-        all_grammar_tags = grammar_dict.keys()  #these lists should be saved and later loaded.
+	grammar_dict = feature_vector.identify_all_grammar_tags(listOfFiles)   
+	all_grammar_tags = grammar_dict.keys()  #these lists should be saved and later loaded.
 
-        f_v=feature_vector.FeatureVector(list_a)
-        vec = f_v.get_vector_alternative( token_index, sentence, all_grammar_tags)
+	f_v=feature_vector.FeatureVector(list_a)
+	vec = f_v.get_vector_alternative( token_index, sentence, all_grammar_tags)
 
-        print all_grammar_tags
-        print vec
+	print all_grammar_tags
+	print vec
 
 
 if __name__ == '__main__':
