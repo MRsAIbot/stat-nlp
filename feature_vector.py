@@ -1,8 +1,9 @@
-#import assignment2 #only for testing issues (test code Johannes)
+import assignment2 #only for testing issues (test code Johannes)
 import numpy as np
 from collections import defaultdict
 import matplotlib.pyplot as plt
 import string
+from scipy.sparse import coo_matrix
 
 """
 Class template for feature vectors. f(x,c)
@@ -18,7 +19,7 @@ An alternative implementation is commented below in case the method of extending
 def identify_all_grammar_tags(file_list):   
     grammar_dict = defaultdict(int)
     for f in file_list:
-        f_json = assignment2.loadJSONfile(f)
+        f_json = assignment2.load_json_file(f)
         for sentence in f_json['sentences']:
             for token in sentence['tokens']:
                 grammar_dict[token['pos']] +=1
@@ -67,13 +68,23 @@ class FeatureVector(dict):
     # alternative function by Johannes
     # takes as input a word + the sentence it occurs in (dict-structure from 
     # json file). 
-    def get_vector_alternative(self, word, sentence):
-        phi_vector = []
+    def get_vector_alternative(self, token_index, sentence, all_grammar_tags):
+        all_indices = []
+        values = []
+        n_samples = 1
+        d=0
         for phi in self:
-            phi_vector += [ self[phi](token_index,sentence) ]
-        # so far phi_vector is list of lists. Flatten it to one huge list.
-        phi_vector = [x for sublist in phi_vector for x in sublist]
-        return phi_vector
+            phi_vector = self[phi](token_index,sentence, all_grammar_tags)
+            d += len(phi_vector)
+
+            index = list(np.nonzero(np.array(phi_vector))[0])
+            all_indices += index
+            values += list(np.array(phi_vector)[index])
+     
+        sparse_feature_matrix = coo_matrix((np.array(values), (np.zeros(np.shape(all_indices)) ,np.array(all_indices))), shape=(n_samples,d))
+        
+        return sparse_feature_matrix
+
 
 
 
@@ -85,8 +96,8 @@ class FeatureVector(dict):
 
 # This particular function is merely an example that returns a vector full of
 # indicators whether different ASCII symbols are contained within the token.
-list_a = []
-def phi_alternative_0(token_index, sentence):
+
+def phi_alternative_0(token_index, sentence, all_grammar_tags):
     token = sentence['tokens'][token_index]['word']
     stem = sentence['tokens'][token_index]['stem']
     #can compute anything here: e.g. can compare token or stem with other words
@@ -96,41 +107,15 @@ def phi_alternative_0(token_index, sentence):
     
     return return_vec
     
-    
-list_a.append(phi_alternative_0)
-
 
 # check for each grammar tag (NN, VP, etc.) if token is this grammatical object.
-def phi_alternative_1(token_index, sentence):
+def phi_alternative_1(token_index, sentence, all_grammar_tags):
     observed_grammar_tag = sentence['tokens'][token_index]['pos']    #e.g. 'NN'
     index = all_grammar_tags.index(observed_grammar_tag)
     
     unit_vec = np.zeros(len(all_grammar_tags), dtype = np.uint8)
     unit_vec[index] = 1.0
     return list(unit_vec) #or return list(unit_vec) #or return sparsified unit_vec 
-list_a.append(phi_alternative_1)
-
-
-
-
-
-# # Testing code (Johannes)
-#test alternative feature functions
-if 1:
-    listOfFiles = assignment2.listFiles()
-    f1 = assignment2.loadJSONfile(listOfFiles[0])
-    sentence = f1['sentences'][0]   #pick first sentence
-    token_index = 0 #first word in sentence
-
-    grammar_dict = identify_all_grammar_tags(file_list)   
-    all_grammar_tags = grammar_dict.keys()  #these lists should be saved and later loaded.
-    
-    f_v=FeatureVector(list_a)
-    vec = f_v.get_vector_alternative( token_index, sentence)
-    
-
-
-
 
 
 
