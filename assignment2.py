@@ -53,21 +53,21 @@ def get_all_arguments(file_list):
     
 
 def main():
-    # # Just testing my functions a bit
-    # list_of_files = list_files()
-    # print (list_of_files[0])
-    # f1 = load_json_file(list_of_files[0])
-    # pprint(len(f1['sentences']))
-        
-    # # Finding and counting all event triggers
-    # # t = get_all_triggers(list_of_files)
-    # # print("Number of distinct event triggers: {0}".format(len(t.keys())))
-    # # pprint(t)
-    
-    # # Finding and counting all possible arguments (=relationship labels)
-    # arg = get_all_arguments(list_of_files)
-    # print("Number of relation arguments: {0}".format(len(arg.keys())))
-    # pprint(arg)
+	# Just testing my functions a bit
+	list_of_files = list_files()
+	print (list_of_files[0])
+	f1 = load_json_file(list_of_files[0])
+	pprint(len(f1['sentences']))
+	    
+	# Finding and counting all event triggers
+	# t = get_all_triggers(list_of_files)
+	# print("Number of distinct event triggers: {0}".format(len(t.keys())))
+	# pprint(t)
+
+	# Finding and counting all possible arguments (=relationship labels)
+	arg = get_all_arguments(list_of_files)
+	print("Number of relation arguments: {0}".format(len(arg.keys())))
+	pprint(arg)
 
     list_a = []
     list_a.append(feature_vector.phi_alternative_0)
