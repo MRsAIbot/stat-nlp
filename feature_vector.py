@@ -52,6 +52,7 @@ class FeatureVector(dict):
         for phi in phi_list:
             self[i]=phi
             i+=1
+        
 
     # returns 0 if trying to access a non-existing feature function
     def __missing__(self, key):

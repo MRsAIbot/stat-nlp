@@ -6,8 +6,8 @@ Created on Sat Nov 22 23:18:03 2014
 """
 
 import numpy as np
-import assignment2 as ass2
-
+import feature_vector as fv
+import json
 
 
 """
@@ -27,26 +27,51 @@ b) alternative to a): generate a whole batch of samples at once
 
 
 #generate one training batch in perceptron algorithm for event triggers
-def build_trigger_data_batch(filename):
+def build_trigger_data_batch(file_name):
     data = []
-    f_json = ass2.load_json_file(filename)
+    f_json = json.load(open(file_name))
     for sentence in f_json['sentences']:
         event_candidates_list = sentence['eventCandidates']
         for event in event_candidates_list:
-            feature_vector = compute_features_trigger(sentence, event)
+            feature_vector = fv.compute_features_trigger(sentence, event)
             trigger = event['gold']
             #only provisional, maybe better save in (sparse?) matrix form
             data += [(feature_vector, trigger)]
             
     return data
                 
-    
-#compute feature vector for given event (=dict) in its sentence (also dict)
-def compute_features_trigger(sentence, event):
-    pass        
-            
-            
-#for running perceptron algorithm to detect arguments (=labels of relations)
-def build_trigger_data_batch(filename):
-    pass
 
+def predict(feature_vector, Lambda, classes):
+    class_probabilities = []
+    for c in classes:
+        class_probabilities += np.exp( np.dot(feature_vector, Lambda) )
+    highest_probability = max(class_probabilities)
+    predicted_class = class_probabilities.index(highest_probability)
+    return predicted_class
+    
+
+def run_perceptron(FeatureVector, lambda_init = None, T_max = 100):
+    lambda_init = np.random.normal(0.0, 1.0, 100)
+    
+    iteration = 0
+    while iteration < T_max:
+        iteration+=1
+        
+        (X,Y) = build_trigger_data_batch(...)
+        for (x,y) in zip(X,Y):
+            y_hat = predict(feature_vector, Lambda, classes)
+            if y_hat == y:
+                pass
+            else:
+                Lambda = modify weights accordingly
+        
+    return Lambda
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
