@@ -57,6 +57,7 @@ class FeatureVector(dict):
     def __missing__(self, key):
         return 0
 
+    """
     # original function by michael
     # returns a vector with all the feature functions evaluated at the given inputs (word, c) as elements
     def get_vector(self, word, c):
@@ -64,27 +65,58 @@ class FeatureVector(dict):
         for phi in self:
             phi_vector.append(self[phi](word,c))
         return phi_vector
-
-    # alternative function by Johannes
+    
+    """
+    # alternative function by Johannes (obsolete)
     # takes as input a word + the sentence it occurs in (dict-structure from 
     # json file). 
     def get_vector_alternative(self, token_index, sentence, all_grammar_tags):
-        all_indices = []
+        all_col_indices = []
         values = []
         n_samples = 1
         d=0
         for phi in self:
             phi_vector = self[phi](token_index,sentence, all_grammar_tags)
-            d += len(phi_vector)
 
             index = list(np.nonzero(np.array(phi_vector))[0])
-            all_indices += index
+            all_col_indices += [i+d for i in index] # offset d in matrix
+            d += len(phi_vector)
+
             values += list(np.array(phi_vector)[index])
-     
-        sparse_feature_matrix = coo_matrix((np.array(values), (np.zeros(np.shape(all_indices)) ,np.array(all_indices))), shape=(n_samples,d))
+
+        sparse_feature_matrix = coo_matrix((np.array(values), (np.zeros(np.shape(all_col_indices)) ,np.array(all_col_indices))), shape=(n_samples,d))
         
         return sparse_feature_matrix
+    
 
+    #New version: Compute feature vec for whole batch of inputs!
+    #Return a sparse matrix, rows: samples. cols: feature dimensions.
+    def get_feature_batch(self, token_index_list, sentence_list, all_grammar_tags):
+        n_samples = len(token_index_list)
+        d=0
+        all_col_indices = []
+        all_row_indices = []
+        values = []
+        for (s, (sentence, token_index)) in enumerate(zip(sentence_list, token_index_list)):
+            print s
+            for phi in self:
+                phi_vector = self[phi](token_index,sentence, all_grammar_tags)
+    
+                index = list(np.nonzero(np.array(phi_vector))[0])
+                all_col_indices += [i+d for i in index]    # offset d in matrix                
+                all_row_indices += [s]*len(index)
+                
+                values += list(np.array(phi_vector)[index])
+                
+                d += len(phi_vector)
+         
+        
+        sparse_feature_matrix = coo_matrix((np.array(values), 
+                                            (np.asarray(all_row_indices),
+                                            np.array(all_col_indices) ) ),
+                                            shape=(n_samples,d))
+            
+        return sparse_feature_matrix
 
 
 
@@ -93,7 +125,6 @@ class FeatureVector(dict):
 # tags, links and relations to other tokens, their positions, and finally
 # also the gold labels for both triggers and arguments.) Note that the token
 # is not a string, but the index at which this token appears in sentence.
-
 # This particular function is merely an example that returns a vector full of
 # indicators whether different ASCII symbols are contained within the token.
 

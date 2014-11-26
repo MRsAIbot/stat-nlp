@@ -5,6 +5,7 @@ import pickle # Not used yet, but might be useful later
 from collections import defaultdict
 from pprint import pprint
 import feature_vector
+import numpy as np
 
 """
 TO DO
@@ -85,8 +86,13 @@ def main():
 	f_v=feature_vector.FeatureVector(list_a)
 	vec = f_v.get_vector_alternative( token_index, sentence, all_grammar_tags)
 
-	print all_grammar_tags
-	print vec
+	if 1:
+         f_matrix = f_v.get_feature_batch( [0,1,2], [sentence]*3, all_grammar_tags)
+         print np.array(f_matrix.todense())
+         print f_matrix.col
+         print f_matrix.row
+         print f_matrix.data
+
 
 
 if __name__ == '__main__':
