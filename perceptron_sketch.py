@@ -24,7 +24,16 @@ b) alternative to a): generate a whole batch of samples at once
 
 """
 
+def get_all_triggers(file_list):
+	trigger_dict = defaultdict(int)
+	for f in file_list:
+		f_json = load_json_file(f)
+		for i in range(len(f_json['sentences'])):
+			trigger_list = f_json['sentences'][i]['eventCandidates']
+			for trigger in trigger_list:
+				trigger_dict[trigger['gold']] += 1
 
+	return trigger_dict
 
 #generate one training batch in perceptron algorithm for event triggers. 
 #output: For all events in file file_name: the features (matrix) & triggers
@@ -52,7 +61,8 @@ def build_trigger_data_batch(file_name, FeatureVector):
 def predict(feature_vector, Lambda, classes):
     class_probabilities = []
     for c in classes:
-        class_probabilities += np.exp( np.dot(feature_vector, Lambda) )
+        class_probabilities.append( np.exp( feature_vector.dot(Lambda)[0] ) )
+        
     highest_probability = max(class_probabilities)
     predicted_class = class_probabilities.index(highest_probability)
     return predicted_class
@@ -60,7 +70,7 @@ def predict(feature_vector, Lambda, classes):
     
 
 
-def run_perceptron(FeatureVector, lambda_init = None, T_max = 100):
+def run_perceptron(FeatureVector, t_list, lambda_init = None, T_max = 100):
     FV =feature_vector.FeatureVector(list_a)
     (batch, triggers) = build_trigger_data_batch(file_name, FV)
     
@@ -74,11 +84,13 @@ def run_perceptron(FeatureVector, lambda_init = None, T_max = 100):
     iteration = 0
     while iteration < T_max:
         iteration+=1
+        
         for r in range(N_samples):
             X = batch.getrow(r)
             y = triggers[r]
             
-            y_hat = predict(feature_vector, Lambda, classes)
+            y_hat = predict(X, Lambda, t_list)
+            #can also use batch.dot(Lambda) to compute predictions for whole batch!!!
             if y_hat == y:
                 pass
             else:
@@ -103,8 +115,8 @@ if 1:
 
     FV =feature_vector.FeatureVector(list_a)
     (batch, triggers) = build_trigger_data_batch(file_name, FV)
-
     
+    t_list = list(get_all_triggers(listOfFiles) )    
     
     
     
