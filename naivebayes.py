@@ -3,7 +3,8 @@ from scipy.sparse import issparse
 
 class NaiveBayes(object):
 	"""docstring for NaiveBayes"""
-	def __init__(self, fit_prior=None, class_prior=None):
+	def __init__(self, k=1.0, fit_prior=None, class_prior=None):
+		self.k = k
 		self.fit_prior = fit_prior
 		self.class_prior = class_prior
 
@@ -18,7 +19,18 @@ class NaiveBayes(object):
 	# An internal function to compute the log likelihood
 	def _joint_log_likelihood(self, X):
 		X = check_array(X, accept_sparse='csr')
-		return (safe_sparse_dot(X, self.feature_log_prob_.T) + self.class_log_prior_)
+
+		n_classes, n_features = self.feature_log_prob_.T
+		n_samples, n_features_X = X.shape
+
+		if n_features_X != n_features:
+			raise ValueError("Expected input with %d features, got %d instead" % (n_features, n_features_X))
+
+		neg_prob = np.log(1 - np.exp(self.feature_log_prob_))
+		jll = safe_sparse_dot(X, (self.feature_log_prob_ - neg_prob).T)
+		jll += self.class_log_prior_ + neg_prob.sum(axis=1)
+
+		return jll
 
 	# A function that fits our model
 	def fit(self, X, y):
@@ -33,8 +45,8 @@ class NaiveBayes(object):
 		self.class_count = y.sum(axis=0)
 
 	# Apply add-K smoothing
-	def _apply_smoothing(self, k=1.0):
-		feature_count_smooth = self.feature_count + a
+	def _apply_smoothing(self):
+		feature_count_smooth = self.feature_count + self.k
 		class_count_smooth = feature_count_smooth.sum(axis=1)
 
 		self.feature_log_prob_ = np.log(feature_count_smooth) - np.log(class_count_smooth.reshape(-1,1))
