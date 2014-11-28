@@ -6,12 +6,8 @@ from collections import defaultdict
 from pprint import pprint
 import feature_vector
 import numpy as np
+import naivebayes as nb
 
-"""
-TO DO
-- creat document classes
-- implement Naive Bayes
-"""
 
 # Create a list of .json file names
 def list_files(path="./bionlp2011genia-train-clean/*.json"):
