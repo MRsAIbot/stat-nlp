@@ -1,6 +1,3 @@
-"""
-@author: Tobias Rijken
-"""
 import numpy as np
 from scipy.sparse import issparse
 
@@ -34,3 +31,15 @@ class NaiveBayes(object):
 	def predict(self, X):
 		joint_log_likelihood = self._joint_log_likelihood(X)
 		return self.classes_[np.argmax(joint_log_likelihood, axis=1)]
+
+	def precision(self, X):
+		pass
+
+	def recall(self, X):
+		pass
+
+	def f1_measure(self, X):
+		pass
+
+	def accuracy(self, X):
+		pass
