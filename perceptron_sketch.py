@@ -184,7 +184,7 @@ if 0:
     Lambda, misclassification_rates = train_perceptron(FV, t_list, 50, T_max = 5, LR = 1.0)   
     
     
-    train,valid = utils.create_training_and_validation_file_lists(ratio = 0.75)    
+    train,valid = utils.create_training_and_validation_file_lists(ratio = 0.75, load=True)    
     
     
     

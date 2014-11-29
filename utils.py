@@ -11,6 +11,7 @@ from collections import defaultdict
 import json
 import matplotlib.pyplot as plt
 import numpy as np
+import cPickle
 
 
 # Create a list of .json file names
@@ -81,16 +82,31 @@ def identify_all_grammar_tags(file_list):
     return grammar_dict
 
 
-def create_training_and_validation_file_lists(ratio = 0.75):
+def create_training_and_validation_file_lists(ratio = 0.75, load = True):
     #ratio determines the ratio between training and validation set size
-    all_files = list_files()
-    L = len(all_files)
+
+    if load == True:    #load previously saved splitting into train-valid sets
+        print 'Loading predetermined training/validation splitting from file.'
+        f = open('training_validation_files',"rb")
+        t,v = cPickle.load(f)
+        return t,v
+
+    else:
+        all_files = list_files()
+        L = len(all_files)
+        
+        perm = np.random.permutation(L)
+        split_index = np.int(np.floor(L*ratio))
+        
+        training_files   = [all_files[p] for p in perm[ :split_index] ]
+        validation_files = [all_files[p] for p in perm[split_index: ] ]
     
-    perm = np.random.permutation(L)
-    split_index = np.int(np.floor(L*ratio))
-    
-    training_files   = [all_files[p] for p in perm[ :split_index] ]
-    validation_files = [all_files[p] for p in perm[split_index: ] ]
+        #save to file.
+        savedata = (training_files, validation_files)
+        f = open('training_validation_files',"w")
+        cPickle.dump(savedata, f)
+        f.close()
+
     
     return training_files, validation_files
     
