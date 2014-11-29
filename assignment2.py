@@ -8,6 +8,7 @@ import feature_vector
 import numpy as np
 import random
 from sklearn.naive_bayes import BernoulliNB
+import naivebayes as nb
 
 # Create a list of .json file names
 def list_files(path="./bionlp2011genia-train-clean/*.json"):

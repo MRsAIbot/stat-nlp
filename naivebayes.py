@@ -34,15 +34,19 @@ class NaiveBayes(object):
 
 	# An internal function to compute the log likelihood
 	def _joint_log_likelihood(self, X):
-		X = check_array(X, accept_sparse='csr')
+		# X = check_array(X, accept_sparse='csr')
 
-		n_classes, n_features = self.feature_log_prob_.T
+		# if self.binarize is not None:
+		# 	X = binarize(X, threshold=self.binarize)
+
+		n_classes, n_features = self.feature_log_prob_.shape
 		n_samples, n_features_X = X.shape
 
 		if n_features_X != n_features:
 			raise ValueError("Expected input with %d features, got %d instead" % (n_features, n_features_X))
 
 		neg_prob = np.log(1 - np.exp(self.feature_log_prob_))
+		# Compute  neg_prob * (1 - X).T  as  sum(neg_prob - X * neg_prob)
 		jll = safe_sparse_dot(X, (self.feature_log_prob_ - neg_prob).T)
 		jll += self.class_log_prior_ + neg_prob.sum(axis=1)
 
@@ -62,22 +66,7 @@ class NaiveBayes(object):
 
 	# A function that trains our model
 	def train(self, X, y, sample_weight=None):
-		"""Fit Naive Bayes classifier according to X, y
-		Parameters
-		----------
-		X : {array-like, sparse matrix}, shape = [n_samples, n_features]
-		    Training vectors, where n_samples is the number of samples and
-		    n_features is the number of features.
-		y : array-like, shape = [n_samples]
-		    Target values.
-		sample_weight : array-like, shape = [n_samples], optional
-		    Weights applied to individual samples (1. for unweighted).
-		Returns
-		-------
-		self : object
-		    Returns self.
-		"""
-		X, y = check_X_y(X, y, 'csr')
+		#X, y = check_X_y(X, y, 'csr')
 		_, n_features = X.shape
 
 		labelbin = LabelBinarizer()
