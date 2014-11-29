@@ -1,4 +1,5 @@
 import numpy as np
+import matplotlib.pyplot as plt
 import string
 from scipy.sparse import coo_matrix
 import utils
@@ -10,14 +11,14 @@ An alternative implementation is commented below in case the method of extending
 """
 class FeatureVector(dict):
     # this extended dictionary class is initialised by passing a list of functions to it. These are then assigned as dictionary items upon init.
-    def __init__(self, phi_list, listOfAllFiles):
+    def __init__(self, phi_list,):
         i=0
         for phi in phi_list:
             self[i]=phi
             i+=1
-        self.listOfAllFiles = listOfAllFiles
-        self.all_grammar_tags = list(utils.identify_all_grammar_tags(listOfAllFiles))
-        self.trigger_list = list(utils.get_all_triggers(listOfAllFiles) )
+        self.listOfAllFiles = utils.list_files()
+        self.all_grammar_tags = list(utils.identify_all_grammar_tags(self.listOfAllFiles))
+        self.trigger_list = list(utils.get_all_triggers(self.listOfAllFiles) )
         
 
 
@@ -78,11 +79,6 @@ def phi_alternative_1(token_index, sentence, all_grammar_tags):
     unit_vec = np.zeros(len(all_grammar_tags), dtype = np.uint8)
     unit_vec[index] = 1.0
     return list(unit_vec) #or return list(unit_vec) #or return sparsified unit_vec 
-
-
-
-
-
 
 
 

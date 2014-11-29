@@ -6,27 +6,14 @@ Created on Sat Nov 22 23:18:03 2014
 """
 
 import numpy as np
+import matplotlib.pyplot as plt
 import feature_vector 
 import utils
 import json
 import time
-from collections import defaultdict
-
-"""
-Proposition for overall idea: (you can tear it apart completely if you want!)
-
-a) Load and compute features for single sample on the run during the perceptron
-iterations.
--->Not have to store the huge feature vectors for every single sample together.
-
-b) alternative to a): generate a whole batch of samples at once
--->
-
--generate a single training datum using 'build_trigger_datum'
-
-"""
 
 
+#subsample the >None< events, to obtain more balanced data set.
 def subsample(feature_list, trigger_list, subsampling_rate = 0.95):
     
     None_indices = [i for (i,trigger) in enumerate(trigger_list) if trigger == u'None']
@@ -50,10 +37,11 @@ def subsample(feature_list, trigger_list, subsampling_rate = 0.95):
     return subsampled_feature_list, subsampled_trigger_list
 
 
+
 #generate one training batch in perceptron algorithm for event triggers. 
 #output: For all events in file file_name: the features (matrix) & triggers
 def build_trigger_data_batch(file_name, FV):
-    triggers = []
+    trigger_list = []
     
     token_index_list = []
     sentence_list = []
@@ -64,26 +52,43 @@ def build_trigger_data_batch(file_name, FV):
         for event in event_candidates_list:
             token_index_list.append( event['begin'] )
             sentence_list.append(sentence)
-            triggers += [ event['gold'] ]
+            trigger_list += [ event['gold'] ]
     
     matrix_list = []
-    for token_index,sentence in zip(token_index_list,sentence_list):
-        matrix_list.append( FV.get_feature_matrix(token_index, sentence, all_grammar_tags) )
+    for token_index,sentence in zip(token_index_list, sentence_list):
+        matrix_list.append( FV.get_feature_matrix(token_index, sentence) )
+
+    return matrix_list, trigger_list
+            
+            
+            
+def test_perceptron(FV, Lambda, file_list):
+    #Test data from all files in file_list
+    feature_list = []
+    trigger_list = []
+    for i_f, filename in enumerate(file_list):
+        print 'Building test data from json file ',i_f , 'of', len(file_list)
+        (feat_list_one_file, trig_list_one_file) = build_trigger_data_batch(filename, FV)
+        feature_list += feat_list_one_file
+        trigger_list += trig_list_one_file
+
+    predictions = []    
+    gold_labels = []
+    for i, (f,y) in enumerate(zip(feature_list, trigger_list) ):
+        if not i%100:
+            print 'Predicting', i, 'of', len(trigger_list)
+        y_hat = predict(f, Lambda)
+        predictions += [y_hat]
+        gold_labels += [ FV.trigger_list.index(y) ]
         
-    #batch = FV.get_feature_batch(token_index_list, sentence_list, all_grammar_tags)
-    #feature_vector = FV.get_vector_alternative(token_index, sentence, all_grammar_tags)
-    return matrix_list, triggers
-            
-            
-def test_perceptron(Lambda):
-    pass        
+    return predictions, gold_labels
+        
+        
 
-
-def predict(feature_matrix, Lambda, N_classes):
+def predict(feature_matrix, Lambda):
     #feature matrix: rows - classes; columns - feature dimensions
-    #FV.get_feature_matrix(token_index, sentence, all_grammar_tags)
     scores = []
-    for c in range(N_classes):
+    for c in range(feature_matrix.shape[0]):
         scores.append( np.exp( feature_matrix.getrow(c).dot(Lambda[c,:])[0] ) )
         
     highest_score = max(scores)
@@ -93,33 +98,25 @@ def predict(feature_matrix, Lambda, N_classes):
     
 
 
-def train_perceptron(FV, t_list, N_files, T_max = 1, LR = 1.0):
-    #FV =feature_vector.FeatureVector(list_a)
-    #(batch, triggers) = build_trigger_data_batch(file_name, FV)
-
-    #f0 = FV.get_feature_matrix(token_index, sentence, all_grammar_tags)
+def train_perceptron(FV, training_files, T_max = 1, LR = 1.0):
     t_start = time.time()
 
     #Generate training data
+    N_files = len(training_files)
     feature_list = []
     trigger_list = []
-    for i_f, filename in enumerate(listOfFiles[0:N_files]):
+    for i_f, filename in enumerate(training_files):
         print 'Building training data from json file ',i_f
-        (feat_list_one_file, trig_list_one_file) = build_trigger_data_batch(listOfFiles[0], FV)
+        (feat_list_one_file, trig_list_one_file) = build_trigger_data_batch(filename, FV)
         feature_list += feat_list_one_file
         trigger_list += trig_list_one_file
         
-
     feature_list, trigger_list = subsample(feature_list, trigger_list, subsampling_rate = 0.95)    
-        
-    
     N_classes, N_dims = feature_list[0].shape
     N_samples = len(trigger_list)
 
-
-    Lambda = np.random.normal(0.0, 1.0, [N_classes, N_dims])
-
-    
+    #initialise parameters
+    Lambda = np.random.normal(0.0, 1.0, [N_classes, N_dims])    
     iteration = 0
     misclassification_rates = []
     
@@ -131,10 +128,11 @@ def train_perceptron(FV, t_list, N_files, T_max = 1, LR = 1.0):
         for sample in range(N_samples):
             X = feature_list[sample]
             trigger = trigger_list[sample] 
-            y = t_list.index(trigger)
+            y = FV.trigger_list.index(trigger)
             
-            y_hat = predict(X, Lambda, N_classes)
-            print 'it',iteration, sample, 'of', N_samples,'Predict:', y, 'True:', y_hat
+            y_hat = predict(X, Lambda)
+            if not sample % 50:
+                print 'it',iteration, sample, 'of', N_samples,'Predict:', y, 'True:', y_hat
             if y_hat != y:
                 Delta = np.zeros([N_classes, N_dims])
                 Delta[y_hat, :] = -LR*X.getrow(y_hat).todense() 
@@ -154,49 +152,36 @@ def train_perceptron(FV, t_list, N_files, T_max = 1, LR = 1.0):
  
  
 
-if 0:
-    
-    listOfFiles = utils.list_files()
-    file_name = listOfFiles[0]
-    triggers = list(utils.get_all_triggers(listOfFiles) )
-    
+if 1:
     list_a = []
     list_a.append(feature_vector.phi_alternative_0)
-    list_a.append(feature_vector.phi_alternative_0)
     list_a.append(feature_vector.phi_alternative_1)
-    if 0:
-        grammar_dict = feature_vector.identify_all_grammar_tags(listOfFiles)   
-        all_grammar_tags = grammar_dict.keys()  #these lists should be saved and later loaded.
-
+    
     FV = feature_vector.FeatureVector(list_a)
-    (batch, triggers) = build_trigger_data_batch(file_name, FV)
     
-    t_list = list(utils.get_all_triggers(listOfFiles) )    
-    
-    if 1:
+    if 0:
+        listOfFiles = utils.list_files()
         f1 = utils.load_json_file(listOfFiles[0])
         sentence = f1['sentences'][0]   #pick first sentence
         token_index = 0 #first word in sentence
-        feature_matrix = FV.get_feature_matrix(token_index, sentence, all_grammar_tags)
-    
-    
-    
-    Lambda, misclassification_rates = train_perceptron(FV, t_list, 50, T_max = 5, LR = 1.0)   
+        feature_matrix = FV.get_feature_matrix(token_index, sentence)
     
     
     train,valid = utils.create_training_and_validation_file_lists(ratio = 0.75, load=True)    
-    
-    
-    
-    """
-     if 0:
-        	
 
-	
-        	f_v=feature_vector.FeatureVector(list_a)
-        	vec = f_v.get_vector_alternative( token_index, sentence, all_grammar_tags)
-         
-    """
- 
- 
+    Lambda, misclassification_rates = train_perceptron(FV, train[:200], T_max = 25, LR = 10.0)   
+    plt.plot(misclassification_rates)    
+    
+    (y_hat, y) = test_perceptron(FV, Lambda, valid[:3])
+    
+    
+    errors = [1 for y1,y2 in zip(y_hat, y) if y1!=y2]
+    misclassification_rate = len(errors)/float(len(y))
+    
+    
+    
+    
+    
+    
+    
  
