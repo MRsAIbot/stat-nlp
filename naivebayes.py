@@ -3,8 +3,9 @@ from scipy.sparse import issparse
 
 class NaiveBayes(object):
 	"""docstring for NaiveBayes"""
-	def __init__(self, k=1.0, fit_prior=None, class_prior=None):
+	def __init__(self, k=1.0, binarize=.0, fit_prior=None, class_prior=None):
 		self.k = k
+		self.binarize = binarize
 		self.fit_prior = fit_prior
 		self.class_prior = class_prior
 
@@ -15,6 +16,21 @@ class NaiveBayes(object):
 			if dense_output and hasattr(ret, "toarray"):
 				ret = ret.toarray()
 			return ret
+
+	# Apply add-K smoothing
+	def _apply_smoothing(self):
+		n_classes = len(self.classes_)
+		feature_count_smooth = self.feature_count_ + self.k
+		class_count_smooth = self.class_count_ + self.k * n_classes
+
+		self.feature_log_prob_ = np.log(feature_count_smooth) - np.log(class_count_smooth.reshape(-1,1))
+
+	def _update_feature_log_prob(self):
+		n_classes = len(self.classes_)
+		smoothed_fc = self.feature_count_ + self.alpha
+		smoothed_cc = self.class_count_ + self.alpha * n_classes
+
+		self.feature_log_prob_ = (np.log(smoothed_fc) - np.log(smoothed_cc.reshape(-1, 1)))
 
 	# An internal function to compute the log likelihood
 	def _joint_log_likelihood(self, X):
@@ -32,24 +48,69 @@ class NaiveBayes(object):
 
 		return jll
 
-	# A function that fits our model
-	def fit(self, X, y):
-		pass
+	def _update_class_log_prior(self, class_prior=None):
+		n_classes = len(self.classes_)
+		if class_prior is not None:
+		    if len(class_prior) != n_classes:
+		        raise ValueError("Number of priors must match number of classes.")
+			self.class_log_prior_ = np.log(class_prior)
+		elif self.fit_prior:
+			# empirical prior, with sample_weight taken into account
+			self.class_log_prior_ = (np.log(self.class_count_) - np.log(self.class_count_.sum()))
+		else:
+			self.class_log_prior_ = np.zeros(n_classes) - np.log(n_classes)
 
-	# A function to partially fit our model to enable online learning
-	def fit_online(self, X, y):
+	# A function that trains our model
+	def train(self, X, y, sample_weight=None):
+		"""Fit Naive Bayes classifier according to X, y
+		Parameters
+		----------
+		X : {array-like, sparse matrix}, shape = [n_samples, n_features]
+		    Training vectors, where n_samples is the number of samples and
+		    n_features is the number of features.
+		y : array-like, shape = [n_samples]
+		    Target values.
+		sample_weight : array-like, shape = [n_samples], optional
+		    Weights applied to individual samples (1. for unweighted).
+		Returns
+		-------
+		self : object
+		    Returns self.
+		"""
+		X, y = check_X_y(X, y, 'csr')
+		_, n_features = X.shape
+
+		labelbin = LabelBinarizer()
+		Y = labelbin.fit_transform(y)
+		self.classes_ = labelbin.classes_
+		if Y.shape[1] == 1:
+			Y = np.concatenate((1 - Y, Y), axis=1)
+
+		# convert to float to support sample weight consistently;
+		# this means we also don't have to cast X to floating point
+		Y = Y.astype(np.float64)
+		if sample_weight is not None:
+			Y *= check_array(sample_weight).T
+
+		class_prior = self.class_prior
+
+		# Count raw events from data before updating the class log prior
+		# and feature log probas
+		n_effective_classes = Y.shape[1]
+		self.class_count_ = np.zeros(n_effective_classes, dtype=np.float64)
+		self.feature_count_ = np.zeros((n_effective_classes, n_features), dtype=np.float64)
+		self._count(X, Y)
+		self._update_feature_log_prob()
+		self._update_class_log_prior(class_prior=class_prior)
+		return self
+
+	# A function to partially train our model to enable online learning
+	def train_online(self, X, y):
 		pass
 
 	def _count(self, X, y):
 		self.feature_count = safe_sparse_dot(y.T, X)
 		self.class_count = y.sum(axis=0)
-
-	# Apply add-K smoothing
-	def _apply_smoothing(self):
-		feature_count_smooth = self.feature_count + self.k
-		class_count_smooth = feature_count_smooth.sum(axis=1)
-
-		self.feature_log_prob_ = np.log(feature_count_smooth) - np.log(class_count_smooth.reshape(-1,1))
 
 	# Given a new set of datapoints, this function predict the class
 	def predict(self, X):
