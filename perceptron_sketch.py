@@ -6,7 +6,7 @@ Created on Sat Nov 22 23:18:03 2014
 """
 
 import numpy as np
-import feature_vector as fv
+import feature_vector 
 import json
 
 
@@ -37,9 +37,9 @@ def get_all_triggers(file_list):
 
 #generate one training batch in perceptron algorithm for event triggers. 
 #output: For all events in file file_name: the features (matrix) & triggers
-def build_trigger_data_batch(file_name, FeatureVector):
-    fv_gathered = []
+def build_trigger_data_batch(file_name, FV):
     triggers = []
+    
     token_index_list = []
     sentence_list = []
     f_json = json.load(open(file_name))
@@ -51,59 +51,83 @@ def build_trigger_data_batch(file_name, FeatureVector):
             sentence_list.append(sentence)
             triggers += [ event['gold'] ]
     
-    
-    batch = FV.get_feature_batch(token_index_list, sentence_list, all_grammar_tags)
+    matrix_list = []
+    for token_index,sentence in zip(token_index_list,sentence_list):
+        matrix_list.append( FV.get_feature_matrix(token_index, sentence, all_grammar_tags) )
+        
+    #batch = FV.get_feature_batch(token_index_list, sentence_list, all_grammar_tags)
     #feature_vector = FV.get_vector_alternative(token_index, sentence, all_grammar_tags)
-    #fv_gathered += [feature_vector]            
-    return batch, triggers
+    return matrix_list, triggers
                 
 
-def predict(feature_vector, Lambda, classes):
-    class_probabilities = []
-    for c in classes:
-        class_probabilities.append( np.exp( feature_vector.dot(Lambda)[0] ) )
+def predict(feature_matrix, Lambda, N_classes):
+    #feature matrix: rows - classes; columns - feature dimensions
+    #FV.get_feature_matrix(token_index, sentence, all_grammar_tags)
+    scores = []
+    for c in range(N_classes):
+        scores.append( np.exp( feature_matrix.getrow(c).dot(Lambda[c,:])[0] ) )
         
-    highest_probability = max(class_probabilities)
-    predicted_class = class_probabilities.index(highest_probability)
+    highest_score = max(scores)
+    predicted_class = scores.index(highest_score)
     return predicted_class
     
     
 
 
-def run_perceptron(FeatureVector, t_list, lambda_init = None, T_max = 100):
-    FV =feature_vector.FeatureVector(list_a)
-    (batch, triggers) = build_trigger_data_batch(file_name, FV)
-    
-    N_samples, feature_dims = batch.shape
+def run_perceptron(FV, t_list,  T_max = 1, lambda_init = None, LR = 1.0):
+    #FV =feature_vector.FeatureVector(list_a)
+    #(batch, triggers) = build_trigger_data_batch(file_name, FV)
+
+    #f0 = FV.get_feature_matrix(token_index, sentence, all_grammar_tags)
+
+    (feature_list, trigger_list) = build_trigger_data_batch(file_name, FV)
+
+    N_classes, N_dims = feature_list[0].shape
+    N_samples = len(trigger_list)
 
     if lambda_init == None:
-        Lambda = np.random.normal(0.0, 1.0, feature_dims)
+        Lambda_start = np.random.normal(0.0, 1.0, [N_classes, N_dims])
+        Lambda = Lambda_start
     else:
         Lambda = lambda_init
     
     iteration = 0
+    misclassification_rates = []
     while iteration < T_max:
         iteration+=1
-        
-        for r in range(N_samples):
-            X = batch.getrow(r)
-            y = triggers[r]
+        misclassified = 0
+
+        for sample in range(N_samples):
             
-            y_hat = predict(X, Lambda, t_list)
-            #can also use batch.dot(Lambda) to compute predictions for whole batch!!!
-            if y_hat == y:
-                pass
+            X = feature_list[sample]
+            trigger = trigger_list[sample] 
+            y = t_list.index(trigger)
+            
+            print np.any(Lambda != Lambda_start)
+            y_hat = predict(X, Lambda, N_classes)
+            print iteration, sample, 'Predict:', y, 'True:', y_hat
+            if y_hat != y:
+                Delta = np.zeros([N_classes, N_dims])
+                Delta[y_hat, :] = -LR*X.getrow(y_hat).todense() 
+                Delta[y , :]  =  LR*X.getrow(y).todense() 
+
+                Lambda_New = np.add(Lambda, Delta)
+                Lambda = Lambda_New
+                
+                misclassified +=1
             else:
-                Lambda = modify weights accordingly
-        
-    return Lambda
+                pass #prediction correct, no change.
+        print misclassified
+        misclassification_rates += [ float(misclassified)/float(N_samples) ]
+    return Lambda, misclassification_rates
  
  
 
-if 1:
+if 0:
     
     listOfFiles = list_files()
     file_name = listOfFiles[0]
+    triggers = list(get_all_triggers(listOfFiles) )
     
     list_a = []
     list_a.append(feature_vector.phi_alternative_0)
@@ -113,24 +137,32 @@ if 1:
         grammar_dict = feature_vector.identify_all_grammar_tags(listOfFiles)   
         all_grammar_tags = grammar_dict.keys()  #these lists should be saved and later loaded.
 
-    FV =feature_vector.FeatureVector(list_a)
+    FV = feature_vector.FeatureVector(list_a)
     (batch, triggers) = build_trigger_data_batch(file_name, FV)
     
     t_list = list(get_all_triggers(listOfFiles) )    
     
+    if 1:
+        f1 = load_json_file(listOfFiles[0])
+        sentence = f1['sentences'][0]   #pick first sentence
+        token_index = 0 #first word in sentence
+        feature_matrix = FV.get_feature_matrix(token_index, sentence, all_grammar_tags)
     
     
+    
+    Lambda, misclassification_rates = run_perceptron(FV, t_list, T_max = 10, LR = 1.0)   
+    
+    
+    
+    """
      if 0:
-	listOfFiles = list_files()
-	f1 = load_json_file(listOfFiles[0])
-	sentence = f1['sentences'][0]   #pick first sentence
-	token_index = 0 #first word in sentence
+        	
 
 	
-	f_v=feature_vector.FeatureVector(list_a)
-	vec = f_v.get_vector_alternative( token_index, sentence, all_grammar_tags)
- 
- 
+        	f_v=feature_vector.FeatureVector(list_a)
+        	vec = f_v.get_vector_alternative( token_index, sentence, all_grammar_tags)
+         
+    """
  
  
  
