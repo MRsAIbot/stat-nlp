@@ -169,7 +169,7 @@ if 1:
     
     train,valid = utils.create_training_and_validation_file_lists(ratio = 0.75, load=True)    
 
-    Lambda, misclassification_rates = train_perceptron(FV, train[:200], T_max = 25, LR = 10.0)   
+    Lambda, misclassification_rates = train_perceptron(FV, train[:20], T_max = 25, LR = 10.0)   
     plt.plot(misclassification_rates)    
     
     (y_hat, y) = test_perceptron(FV, Lambda, valid[:3])

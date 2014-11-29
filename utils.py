@@ -82,6 +82,23 @@ def identify_all_grammar_tags(file_list):
     return grammar_dict
 
 
+def identify_typical_trigger_word_stems():
+    file_list = list_files()
+    stem_dict = defaultdict(int)
+    triggers = list(get_all_triggers(file_list) )
+    for trigger in triggers:
+        stem_dict[trigger] = defaultdict(int)
+        
+    for f in file_list:
+        f_json = load_json_file(f)
+        for sentence in f_json['sentences']:
+            eventCandidates = sentence['eventCandidates']
+            for ec in eventCandidates:
+                index = ec['begin'] 
+                stem = sentence['tokens'][index]['stem']
+                stem_dict[ec['gold']][stem] +=1
+    return stem_dict
+
 def create_training_and_validation_file_lists(ratio = 0.75, load = True):
     #ratio determines the ratio between training and validation set size
 
