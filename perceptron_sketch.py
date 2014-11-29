@@ -7,8 +7,10 @@ Created on Sat Nov 22 23:18:03 2014
 
 import numpy as np
 import feature_vector 
+import utils
 import json
-
+import time
+from collections import defaultdict
 
 """
 Proposition for overall idea: (you can tear it apart completely if you want!)
@@ -24,16 +26,29 @@ b) alternative to a): generate a whole batch of samples at once
 
 """
 
-def get_all_triggers(file_list):
-	trigger_dict = defaultdict(int)
-	for f in file_list:
-		f_json = load_json_file(f)
-		for i in range(len(f_json['sentences'])):
-			trigger_list = f_json['sentences'][i]['eventCandidates']
-			for trigger in trigger_list:
-				trigger_dict[trigger['gold']] += 1
 
-	return trigger_dict
+def subsample(feature_list, trigger_list, subsampling_rate = 0.95):
+    
+    None_indices = [i for (i,trigger) in enumerate(trigger_list) if trigger == u'None']
+    All_other_indices = [i for (i,trigger) in enumerate(trigger_list) if trigger != u'None']
+    
+    N = len(None_indices)
+    N_pick = np.floor((1.0 - subsampling_rate) * N)
+    
+    #now pick N_pick random 'None' samples among all of them.
+    random_indices = np.floor(np.random.uniform(0, N , N_pick) )    
+    subsample_of_None_indices = [None_indices[int(i)] for i in random_indices]
+    
+    # Identify indices of remaining samples after subsampling + randomise them.
+    remaining_entries = subsample_of_None_indices + All_other_indices
+    perm = np.random.permutation(len(remaining_entries))
+    remaining_entries = [remaining_entries[p] for p in perm]
+    
+    # Return the subsampled list of samples.
+    subsampled_feature_list = [feature_list[i] for i in remaining_entries ]
+    subsampled_trigger_list = [trigger_list[i] for i in remaining_entries ]
+    return subsampled_feature_list, subsampled_trigger_list
+
 
 #generate one training batch in perceptron algorithm for event triggers. 
 #output: For all events in file file_name: the features (matrix) & triggers
@@ -74,38 +89,48 @@ def predict(feature_matrix, Lambda, N_classes):
     
 
 
-def run_perceptron(FV, t_list,  T_max = 1, lambda_init = None, LR = 1.0):
+def run_perceptron(FV, t_list, N_files, T_max = 1, LR = 1.0):
     #FV =feature_vector.FeatureVector(list_a)
     #(batch, triggers) = build_trigger_data_batch(file_name, FV)
 
     #f0 = FV.get_feature_matrix(token_index, sentence, all_grammar_tags)
+    t_start = time.time()
 
-    (feature_list, trigger_list) = build_trigger_data_batch(file_name, FV)
+    #Generate training data
+    feature_list = []
+    trigger_list = []
+    for i_f, filename in enumerate(listOfFiles[0:N_files]):
+        print 'Building training data from json file ',i_f
+        (feat_list_one_file, trig_list_one_file) = build_trigger_data_batch(listOfFiles[0], FV)
+        feature_list += feat_list_one_file
+        trigger_list += trig_list_one_file
+        
 
+    feature_list, trigger_list = subsample(feature_list, trigger_list, subsampling_rate = 0.95)    
+        
+    
     N_classes, N_dims = feature_list[0].shape
     N_samples = len(trigger_list)
 
-    if lambda_init == None:
-        Lambda_start = np.random.normal(0.0, 1.0, [N_classes, N_dims])
-        Lambda = Lambda_start
-    else:
-        Lambda = lambda_init
+
+    Lambda = np.random.normal(0.0, 1.0, [N_classes, N_dims])
+
     
     iteration = 0
     misclassification_rates = []
+    
+    #start training epochs
     while iteration < T_max:
         iteration+=1
         misclassified = 0
 
         for sample in range(N_samples):
-            
             X = feature_list[sample]
             trigger = trigger_list[sample] 
             y = t_list.index(trigger)
             
-            print np.any(Lambda != Lambda_start)
             y_hat = predict(X, Lambda, N_classes)
-            print iteration, sample, 'Predict:', y, 'True:', y_hat
+            print 'it',iteration, sample, 'of', N_samples,'Predict:', y, 'True:', y_hat
             if y_hat != y:
                 Delta = np.zeros([N_classes, N_dims])
                 Delta[y_hat, :] = -LR*X.getrow(y_hat).todense() 
@@ -119,15 +144,17 @@ def run_perceptron(FV, t_list,  T_max = 1, lambda_init = None, LR = 1.0):
                 pass #prediction correct, no change.
         print misclassified
         misclassification_rates += [ float(misclassified)/float(N_samples) ]
+        
+    print time.time()-t_start, 'sec for', N_files, 'Files and', T_max, 'epochs.'
     return Lambda, misclassification_rates
  
  
 
 if 0:
     
-    listOfFiles = list_files()
+    listOfFiles = utils.list_files()
     file_name = listOfFiles[0]
-    triggers = list(get_all_triggers(listOfFiles) )
+    triggers = list(utils.get_all_triggers(listOfFiles) )
     
     list_a = []
     list_a.append(feature_vector.phi_alternative_0)
@@ -140,17 +167,17 @@ if 0:
     FV = feature_vector.FeatureVector(list_a)
     (batch, triggers) = build_trigger_data_batch(file_name, FV)
     
-    t_list = list(get_all_triggers(listOfFiles) )    
+    t_list = list(utils.get_all_triggers(listOfFiles) )    
     
     if 1:
-        f1 = load_json_file(listOfFiles[0])
+        f1 = utils.load_json_file(listOfFiles[0])
         sentence = f1['sentences'][0]   #pick first sentence
         token_index = 0 #first word in sentence
         feature_matrix = FV.get_feature_matrix(token_index, sentence, all_grammar_tags)
     
     
     
-    Lambda, misclassification_rates = run_perceptron(FV, t_list, T_max = 10, LR = 1.0)   
+    Lambda, misclassification_rates = run_perceptron(FV, t_list, 20, T_max = 2, LR = 1.0)   
     
     
     

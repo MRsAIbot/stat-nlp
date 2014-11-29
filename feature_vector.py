@@ -1,127 +1,28 @@
-import assignment2 #only for testing issues (test code Johannes)
 import numpy as np
-from collections import defaultdict
-import matplotlib.pyplot as plt
 import string
 from scipy.sparse import coo_matrix
+import utils
 
 """
 Class template for feature vectors. f(x,c)
 Extending the dictionary class to return 0 if one tries to acceess a feature vector for a missing key.
 An alternative implementation is commented below in case the method of extending the dict class is not adequate.
 """
-
-
-
-# Identify all possible types of grammatical objects occuring in the dataset.
-# Return list of all possible objects: 'NN' 'VP', etc. --> ['NN', 'VP', ...]
-#file_list = assignment2.listFiles()
-def identify_all_grammar_tags(file_list):   
-    grammar_dict = defaultdict(int)
-    for f in file_list:
-        f_json = assignment2.load_json_file(f)
-        for sentence in f_json['sentences']:
-            for token in sentence['tokens']:
-                grammar_dict[token['pos']] +=1
-    
-    
-    if 0:   #make nice plot
-        counts = [grammar_dict[key] for key in grammar_dict.keys()]
-        str_keys = [str(key) for key in grammar_dict.keys()]
-        
-        #visualise result of grammar_dict
-        plt.figure()
-        plt.title('All observed grammar tags and their frequency')
-        plt.stem(counts)
-        plt.xlabel('Grammar Tag')
-        plt.ylabel('Total Occurrence frequency')
-        plt.xticks(range(len(str_keys)), str_keys , rotation=90)
-
-    return grammar_dict
-
-
-
-
 class FeatureVector(dict):
     # this extended dictionary class is initialised by passing a list of functions to it. These are then assigned as dictionary items upon init.
-    def __init__(self, phi_list):
-        # also load presaved comparison lists of all grammar tags / 
-        # gold label lists / argument lists that we need when evaluating the
-        # phi functions. NOT DONE YET.
+    def __init__(self, phi_list, listOfAllFiles):
         i=0
         for phi in phi_list:
             self[i]=phi
             i+=1
+        self.listOfAllFiles = listOfAllFiles
+        self.all_grammar_tags = list(utils.identify_all_grammar_tags(listOfAllFiles))
+        self.trigger_list = list(utils.get_all_triggers(listOfAllFiles) )
         
-
-    # returns 0 if trying to access a non-existing feature function
-    def __missing__(self, key):
-        return 0
-
-    """
-    # original function by michael
-    # returns a vector with all the feature functions evaluated at the given inputs (word, c) as elements
-    def get_vector(self, word, c):
-        phi_vector = []
-        for phi in self:
-            phi_vector.append(self[phi](word,c))
-        return phi_vector
-    
-    """
-    # alternative function by Johannes (obsolete)
-    # takes as input a word + the sentence it occurs in (dict-structure from 
-    # json file). 
-    def get_vector_alternative(self, token_index, sentence, all_grammar_tags):
-        all_col_indices = []
-        values = []
-        n_samples = 1
-        d=0
-        for phi in self:
-            phi_vector = self[phi](token_index,sentence, all_grammar_tags)
-
-            index = list(np.nonzero(np.array(phi_vector))[0])
-            all_col_indices += [i+d for i in index] # offset d in matrix
-            d += len(phi_vector)
-
-            values += list(np.array(phi_vector)[index])
-
-        sparse_feature_matrix = coo_matrix((np.array(values), (np.zeros(np.shape(all_col_indices)) ,np.array(all_col_indices))), shape=(n_samples,d))
-        
-        return sparse_feature_matrix
-    
-
-    #New version: Compute feature vec for whole batch of inputs!
-    #Return a sparse matrix, rows: samples. cols: feature dimensions.
-    def get_feature_batch(self, token_index_list, sentence_list, all_grammar_tags):
-        n_samples = len(token_index_list)
-        d=0
-        all_col_indices = []
-        all_row_indices = []
-        values = []
-        for (s, (sentence, token_index)) in enumerate(zip(sentence_list, token_index_list)):
-            print s
-            for phi in self:
-                phi_vector = self[phi](token_index,sentence, all_grammar_tags)
-    
-                index = list(np.nonzero(np.array(phi_vector))[0])
-                all_col_indices += [i+d for i in index]    # offset d in matrix                
-                all_row_indices += [s]*len(index)
-                
-                values += list(np.array(phi_vector)[index])
-                
-                d += len(phi_vector)
-         
-        
-        sparse_feature_matrix = coo_matrix((np.array(values), 
-                                            (np.asarray(all_row_indices),
-                                            np.array(all_col_indices) ) ),
-                                            shape=(n_samples,d))
-            
-        return sparse_feature_matrix
 
 
     #newest version. Finally includes features for every different class.
-    def get_feature_matrix(self, token_index, sentence, all_grammar_tags):
+    def get_feature_matrix(self, token_index, sentence):
         all_col_indices = []
         all_row_indices = []
         values = []
@@ -129,7 +30,7 @@ class FeatureVector(dict):
         for c in range(n_classes):
             d=0
             for phi in self:
-                phi_vector = self[phi](token_index, sentence, all_grammar_tags)
+                phi_vector = self[phi](token_index, sentence, self.all_grammar_tags)
     
                 index = list(np.nonzero(np.array(phi_vector))[0])
                 all_col_indices += [i+d for i in index]    # offset d in matrix                
@@ -177,3 +78,67 @@ def phi_alternative_1(token_index, sentence, all_grammar_tags):
     unit_vec = np.zeros(len(all_grammar_tags), dtype = np.uint8)
     unit_vec[index] = 1.0
     return list(unit_vec) #or return list(unit_vec) #or return sparsified unit_vec 
+
+
+
+
+
+
+
+
+""" OLD feature functions. Not thrown away yet.
+
+
+# alternative function by Johannes (obsolete)
+# takes as input a word + the sentence it occurs in (dict-structure from 
+# json file). 
+def get_vector_alternative(self, token_index, sentence, all_grammar_tags):
+    all_col_indices = []
+    values = []
+    n_samples = 1
+    d=0
+    for phi in self:
+        phi_vector = self[phi](token_index,sentence, all_grammar_tags)
+
+        index = list(np.nonzero(np.array(phi_vector))[0])
+        all_col_indices += [i+d for i in index] # offset d in matrix
+        d += len(phi_vector)
+
+        values += list(np.array(phi_vector)[index])
+
+    sparse_feature_matrix = coo_matrix((np.array(values), (np.zeros(np.shape(all_col_indices)) ,np.array(all_col_indices))), shape=(n_samples,d))
+    
+    return sparse_feature_matrix
+
+
+#New version: Compute feature vec for whole batch of inputs!
+#Return a sparse matrix, rows: samples. cols: feature dimensions.
+def get_feature_batch(self, token_index_list, sentence_list, all_grammar_tags):
+    n_samples = len(token_index_list)
+    d=0
+    all_col_indices = []
+    all_row_indices = []
+    values = []
+    for (s, (sentence, token_index)) in enumerate(zip(sentence_list, token_index_list)):
+        print s
+        for phi in self:
+            phi_vector = self[phi](token_index,sentence, all_grammar_tags)
+
+            index = list(np.nonzero(np.array(phi_vector))[0])
+            all_col_indices += [i+d for i in index]    # offset d in matrix                
+            all_row_indices += [s]*len(index)
+            
+            values += list(np.array(phi_vector)[index])
+            
+            d += len(phi_vector)
+     
+    
+    sparse_feature_matrix = coo_matrix((np.array(values), 
+                                        (np.asarray(all_row_indices),
+                                        np.array(all_col_indices) ) ),
+                                        shape=(n_samples,d))
+        
+    return sparse_feature_matrix
+"""
+
+
