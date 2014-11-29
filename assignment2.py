@@ -14,6 +14,8 @@ TO DO
 """
 
 
+
+
 def main():
 	# Just testing my functions a bit
 	list_of_files = utils.list_files()
@@ -41,7 +43,7 @@ def main():
 	sentence = f1['sentences'][0]   #pick first sentence
 	token_index = 0 #first word in sentence
 
-	grammar_dict = feature_vector.identify_all_grammar_tags(listOfFiles)   
+	grammar_dict = utils.identify_all_grammar_tags(listOfFiles)   
 	all_grammar_tags = grammar_dict.keys()  #these lists should be saved and later loaded.
 
 	f_v=feature_vector.FeatureVector(list_a)

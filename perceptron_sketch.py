@@ -73,7 +73,11 @@ def build_trigger_data_batch(file_name, FV):
     #batch = FV.get_feature_batch(token_index_list, sentence_list, all_grammar_tags)
     #feature_vector = FV.get_vector_alternative(token_index, sentence, all_grammar_tags)
     return matrix_list, triggers
-                
+            
+            
+def test_perceptron(Lambda):
+    pass        
+
 
 def predict(feature_matrix, Lambda, N_classes):
     #feature matrix: rows - classes; columns - feature dimensions
@@ -89,7 +93,7 @@ def predict(feature_matrix, Lambda, N_classes):
     
 
 
-def run_perceptron(FV, t_list, N_files, T_max = 1, LR = 1.0):
+def train_perceptron(FV, t_list, N_files, T_max = 1, LR = 1.0):
     #FV =feature_vector.FeatureVector(list_a)
     #(batch, triggers) = build_trigger_data_batch(file_name, FV)
 
@@ -177,7 +181,10 @@ if 0:
     
     
     
-    Lambda, misclassification_rates = run_perceptron(FV, t_list, 20, T_max = 2, LR = 1.0)   
+    Lambda, misclassification_rates = train_perceptron(FV, t_list, 50, T_max = 5, LR = 1.0)   
+    
+    
+    train,valid = utils.create_training_and_validation_file_lists(ratio = 0.75)    
     
     
     

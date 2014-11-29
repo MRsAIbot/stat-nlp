@@ -10,6 +10,7 @@ import glob
 from collections import defaultdict
 import json
 import matplotlib.pyplot as plt
+import numpy as np
 
 
 # Create a list of .json file names
@@ -78,3 +79,30 @@ def identify_all_grammar_tags(file_list):
         plt.xticks(range(len(str_keys)), str_keys , rotation=90)
 
     return grammar_dict
+
+
+def create_training_and_validation_file_lists(ratio = 0.75):
+    #ratio determines the ratio between training and validation set size
+    all_files = list_files()
+    L = len(all_files)
+    
+    perm = np.random.permutation(L)
+    split_index = np.int(np.floor(L*ratio))
+    
+    training_files   = [all_files[p] for p in perm[ :split_index] ]
+    validation_files = [all_files[p] for p in perm[split_index: ] ]
+    
+    return training_files, validation_files
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
