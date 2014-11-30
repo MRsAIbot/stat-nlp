@@ -67,9 +67,20 @@ class NaiveBayes(object):
 		y_pred = y_pred[ind]
 		y_true = y_true[ind]
 
-		CM = coo_matrix((np.ones(y_true.shape[0], dtype=np.int), (y_true, y_pred)),
-		                shape=(n_labels, n_labels)
-		                ).toarray()
+		CM = coo_matrix((np.ones(y_true.shape[0]), (y_true, y_pred)), shape=(n_labels, n_labels)).toarray()
+
+		# Compute Recall
+		recall_denom = np.sum(CM, axis=1)
+		diag = CM.diagonal()
+		# Macro-average
+		recall = np.mean(np.divide(diag, recall_denom))
+		print recall
+
+		# Compute precision
+		prec_denom = np.sum(CM, axis=0)
+		precision = np.mean(np.divide(diag,prec_denom))
+		print precision
+
 
 		# Macro-average
 		return CM
