@@ -19,8 +19,7 @@ class FeatureVector(dict):
         self.listOfAllFiles = utils.list_files()
         self.all_grammar_tags = list(utils.identify_all_grammar_tags(self.listOfAllFiles))
         self.trigger_list = list(utils.get_all_triggers(self.listOfAllFiles) )
-        
-
+        self.stem_list = utils.create_stem_list()
 
     #newest version. Finally includes features for every different class.
     def get_feature_matrix(self, token_index, sentence):
@@ -108,8 +107,9 @@ def phi_alternative_1(token_index, sentence, all_grammar_tags):
     return list(unit_vec) #or return list(unit_vec) #or return sparsified unit_vec 
 
 
+
 #extract if argument is a protein
-def phi_argument_0(token_index, arg_index, sentence, all_grammar_tags):
+def phi_argument_0(token_index, arg_index, sentence, comparison_list):
     #argument = sentence['tokens'][arg_index]['word']
     protein = [0]
     for mention in sentence['mentions']:
@@ -127,7 +127,22 @@ def phi_argument_1(token_index, arg_index, sentence, all_grammar_tags):
     return list(unit_vec) #or return list(unit_vec) #or return sparsified unit_vec 
 
 
+def phi_argument_2(token_index, arg_index, sentence, all_grammar_tags):
+    observed_grammar_tag = sentence['tokens'][token_index]['pos']    #e.g. 'NN'
+    index = all_grammar_tags.index(observed_grammar_tag)
+    
+    unit_vec = np.zeros(len(all_grammar_tags), dtype = np.uint8)
+    unit_vec[index] = 1.0
+    return list(unit_vec) #or return list(unit_vec) #or return sparsified unit_vec 
 
+
+def phi_argument_3(token_index, arg_index, sentence, comparison_list):
+    observed_stem = sentence['tokens'][token_index]['stem']    
+    index = comparison_list.index(observed_stem)
+    
+    unit_vec = np.zeros(len(comparison_list), dtype = np.uint8)
+    unit_vec[index] = 1.0
+    return list(unit_vec) 
 
 
 

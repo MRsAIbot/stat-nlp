@@ -26,9 +26,6 @@ def load_json_file(file_name):
 		return d
 
 
-file_name="C:/Python27/aaa_UCL/Natural Language Processing/assignment2/bionlp2011genia-statnlp-test-clean/PMC-1134658-00-TIAB.json"
-
-
 # Returns a dictionary with a count of all triggers
 def get_all_triggers(file_list):
 	trigger_dict = defaultdict(int)
@@ -132,6 +129,28 @@ def create_training_and_validation_file_lists(ratio = 0.75, load = True):
     
     
     
+    
+def create_stem_list(cutoff = 5, load = True):
+    if load == True:
+        print ('Loading stem-list from file.')
+        with open('stem_list.data', 'rb') as f:
+            stem_list = cPickle.load(f)
+    else:
+        print ('Computing stem-list')
+        sd = identify_typical_trigger_word_stems()
+        stem_list = []
+        for key in sd.keys()[1:]:
+            counts = sd[key]
+            for ckey in counts.keys():
+                if counts[ckey] > cutoff:
+                    stem_list += [ckey]
+        
+        #get rid of double elements
+        stem_list = list(set(stem_list))    
+        #save to file.    
+        with open('stem_list.data', 'wb') as f:
+            cPickle.dump(stem_list, f)
+    return stem_list
     
     
     
