@@ -16,7 +16,7 @@ An alternative implementation is commented below in case the method of extending
 # Identify all possible types of grammatical objects occuring in the dataset.
 # Return list of all possible objects: 'NN' 'VP', etc. --> ['NN', 'VP', ...]
 #file_list = assignment2.listFiles()
-def identify_all_grammar_tags(file_list):   
+def identify_all_grammar_tags(file_list, plot=False):   
     grammar_dict = defaultdict(int)
     for f in file_list:
         f_json = assignment2.load_json_file(f)
@@ -24,8 +24,7 @@ def identify_all_grammar_tags(file_list):
             for token in sentence['tokens']:
                 grammar_dict[token['pos']] +=1
     
-    
-    if 0:   #make nice plot
+    if plot:   #make nice plot
         counts = [grammar_dict[key] for key in grammar_dict.keys()]
         str_keys = [str(key) for key in grammar_dict.keys()]
         

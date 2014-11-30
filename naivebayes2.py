@@ -47,9 +47,6 @@ class NaiveBayes(object):
 		return self.classes[np.argmax(jll, axis=1)]
 
 	def evaluate(self, X, y):
-		"""
-		Implement precision, recall and F1-measure
-		"""
 		# Construct confusion matrix
 		y_true = y
 		y_pred = self.predict(X)
