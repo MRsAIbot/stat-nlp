@@ -74,16 +74,16 @@ class NaiveBayes(object):
 		diag = CM.diagonal()
 		# Macro-average
 		recall = np.mean(np.divide(diag, recall_denom))
-		print recall
 
 		# Compute precision
 		prec_denom = np.sum(CM, axis=0)
 		precision = np.mean(np.divide(diag,prec_denom))
-		print precision
 
+		# F1 measure (F-score with beta=1)
+		F1 = 2*precision*recall/(precision+recall)
 
 		# Macro-average
-		return CM
+		return CM, precision, recall, F1
 
 
 

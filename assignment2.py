@@ -99,7 +99,11 @@ def main():
 	NB = nb.NaiveBayes()
 	NB.train(X,y)
 	print(NB.predict(X))
-	print(NB.evaluate(X,y))
+	CM, prec, rec, F1 = NB.evaluate(X,y)
+	print prec
+	print rec
+	print F1
+	print CM
 
 	# clf = BernoulliNB()
 	# clf.fit(X,y)
