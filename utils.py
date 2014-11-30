@@ -26,6 +26,9 @@ def load_json_file(file_name):
 		return d
 
 
+file_name="C:/Python27/aaa_UCL/Natural Language Processing/assignment2/bionlp2011genia-statnlp-test-clean/PMC-1134658-00-TIAB.json"
+
+
 # Returns a dictionary with a count of all triggers
 def get_all_triggers(file_list):
 	trigger_dict = defaultdict(int)
