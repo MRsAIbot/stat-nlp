@@ -98,11 +98,12 @@ def main():
 
 	NB = nb.NaiveBayes()
 	NB.train(X,y)
-	print(NB.predict(X[2]))
+	print(NB.predict(X))
+	print(NB.evaluate(X,y))
 
 	# clf = BernoulliNB()
 	# clf.fit(X,y)
-	# print(clf.predict(X[2]))
+	# print(clf.predict(X))
 
 
 if __name__ == '__main__':

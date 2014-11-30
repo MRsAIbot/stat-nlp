@@ -1,6 +1,8 @@
 import numpy as np
 from scipy.sparse import issparse
 from sklearn.preprocessing import LabelBinarizer
+from scipy.sparse import coo_matrix
+
 
 class NaiveBayes(object):
 	def __init__(self, k=1.0):
@@ -42,4 +44,36 @@ class NaiveBayes(object):
 		neg_prob = np.log(1 - np.exp(self.feature_log_prob))
 		jll = np.dot(X, (self.feature_log_prob - neg_prob).T)
 		jll += self.class_log_prior + neg_prob.sum(axis=1)
-		return self.classes[np.argmax(jll)]
+		return self.classes[np.argmax(jll, axis=1)]
+
+	def evaluate(self, X, y):
+		"""
+		Implement precision, recall and F1-measure
+		"""
+		# Construct confusion matrix
+		y_true = y
+		y_pred = self.predict(X)
+
+		labels = np.unique(y_true)
+
+		n_labels = labels.size
+		label_to_ind = dict((y, x) for x, y in enumerate(labels))
+		# convert yt, yp into index
+		y_pred = np.array([label_to_ind.get(x, n_labels + 1) for x in y_pred])
+		y_true = np.array([label_to_ind.get(x, n_labels + 1) for x in y_true])
+
+		# intersect y_pred, y_true with labels, eliminate items not in labels
+		ind = np.logical_and(y_pred < n_labels, y_true < n_labels)
+		y_pred = y_pred[ind]
+		y_true = y_true[ind]
+
+		CM = coo_matrix((np.ones(y_true.shape[0], dtype=np.int), (y_true, y_pred)),
+		                shape=(n_labels, n_labels)
+		                ).toarray()
+
+		# Macro-average
+		return CM
+
+
+
+
