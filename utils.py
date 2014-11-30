@@ -41,7 +41,9 @@ def get_all_triggers(file_list):
 def get_trigger_list(load = True):
     if load:
         with open('trigger_list.data', 'rb') as f:
-            trigger_list = cPickle.load(f)
+            loaded = cPickle.load(f)
+        trigger_list = correct_end_of_lines_in_saved_list(loaded)
+
     else:
         file_list = list_files()
         trigger_dict = get_all_triggers(file_list)
@@ -80,8 +82,6 @@ def identify_all_grammar_tags(file_list):
         for sentence in f_json['sentences']:
             for token in sentence['tokens']:
                 grammar_dict[token['pos']] +=1
-    
-    
     if 0:   #make nice plot
         counts = [grammar_dict[key] for key in grammar_dict.keys()]
         str_keys = [str(key) for key in grammar_dict.keys()]
@@ -95,10 +95,13 @@ def identify_all_grammar_tags(file_list):
         plt.xticks(range(len(str_keys)), str_keys , rotation=90)
     return grammar_dict
 
+
 def get_grammar_tag_list(load = True):
     if load:
         with open('grammar_tags_list.data', 'rb') as f:
-            gt_list = cPickle.load(f)
+            loaded = cPickle.load(f)
+        gt_list = correct_end_of_lines_in_saved_list(loaded)
+
     else:
         file_list = list_files()
         gt = identify_all_grammar_tags(file_list)
@@ -125,6 +128,7 @@ def identify_typical_trigger_word_stems():
                 stem = sentence['tokens'][index]['stem']
                 stem_dict[ec['gold']][stem] +=1
     return stem_dict
+
 
 def create_training_and_validation_file_lists(ratio = 0.75, load = True):
     #ratio determines the ratio between training and validation set size
@@ -161,7 +165,8 @@ def create_stem_list(cutoff = 5, load = True):
     if load == True:
         print ('Loading stem-list from file.')
         with open('stem_list.data', 'rb') as f:
-            stem_list = cPickle.load(f)
+            loaded = cPickle.load(f)
+        stem_list = correct_end_of_lines_in_saved_list(loaded)
     else:
         print ('Computing stem-list')
         sd = identify_typical_trigger_word_stems()
@@ -181,7 +186,14 @@ def create_stem_list(cutoff = 5, load = True):
     
     
     
-    
+def correct_end_of_lines_in_saved_list(input_list):
+    output_list = []
+    for element in input_list:
+        if '\r' in element:
+            output_list += [element.strip('\r')  ]
+        else:
+            output_list += [element]  
+    return output_list
     
     
     

@@ -64,7 +64,6 @@ class FeatureVector():
             d=0
             for phi in self.phi_list:
                 phi_vector = phi(token_index, arg_index, sentence)
-    
                 index = list(np.nonzero(np.array(phi_vector))[0])
                 all_col_indices += [i+d for i in index]    # offset d in matrix                
                 all_row_indices += [c]*len(index)

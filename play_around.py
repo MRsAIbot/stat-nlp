@@ -43,3 +43,12 @@ class F_test():
         return_vec = [ np.uint8(character in token)  for character in symbols_list]
         
         return return_vec
+        
+        
+        
+        
+import warnings
+
+print 'Before the warning'
+warnings.warn('This is a warning message')
+print 'After the warning'
