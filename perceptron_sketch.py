@@ -15,15 +15,15 @@ import warnings
 
 
 #subsample the >None< events, to obtain more balanced data set.
-def subsample(feature_list, trigger_list, subsampling_rate = 0.95):
+def subsample(feature_list, trigger_list, subsampling_rate = 0.75):
     
     None_indices = [i for (i,trigger) in enumerate(trigger_list) if trigger == u'None']
     All_other_indices = [i for (i,trigger) in enumerate(trigger_list) if trigger != u'None']
     
     
     N = len(None_indices)
-    #N_pick = np.floor((1.0 - subsampling_rate) * N)
-    N_pick = len(All_other_indices)
+    N_pick = np.floor((1.0 - subsampling_rate) * N)
+    #N_pick = len(All_other_indices)
     
     #now pick N_pick random 'None' samples among all of them.
     random_indices = np.floor(np.random.uniform(0, N , N_pick) )    
@@ -83,7 +83,7 @@ def build_argument_data_batch(file_name, FV):
     return matrix_list, gold_list
     
     
-    
+# create predictions for test set
 def test_perceptron(FV, Lambda, file_list, mode):
     #Test data from all files in file_list
     feature_list = []
@@ -91,14 +91,14 @@ def test_perceptron(FV, Lambda, file_list, mode):
     for i_f, filename in enumerate(file_list):
         print 'Building test data from json file ',i_f , 'of', len(file_list)
         if mode == 'Trigger':
-            (feat_list_one_file, trig_list_one_file) = build_trigger_data_batch(filename, FV)
+            (feat_list_one_file, gold_list_one_file) = build_trigger_data_batch(filename, FV)
         elif mode == 'Argument':
-            (feat_list_one_file, trig_list_one_file) = build_argument_data_batch(filename, FV)
+            (feat_list_one_file, gold_list_one_file) = build_argument_data_batch(filename, FV)
         else:
             warnings.warn('Error in test_perceptron: Must have mode "Trigger" or "Argument"!' )
             
         feature_list += feat_list_one_file
-        trigger_list += trig_list_one_file
+        trigger_list += gold_list_one_file
 
     predictions = []    
     gold_labels = []
@@ -115,7 +115,7 @@ def test_perceptron(FV, Lambda, file_list, mode):
     return predictions, gold_labels
         
         
-
+#predict function for perceptron
 def predict(feature_matrix, Lambda):
     #feature matrix: rows - classes; columns - feature dimensions
     scores = []
@@ -189,54 +189,37 @@ def train_perceptron(FV, training_files, T_max = 1, LR = 1.0, mode = 'Trigger'):
     print time.time()-t_start, 'sec for', N_files, 'Files and', T_max, 'epochs.'
     return Lambda, misclassification_rates
  
- 
+
 
 if 0:
-    list_a = []
-    list_a.append(feature_vector.phi_alternative_0)
-    list_a.append(feature_vector.phi_alternative_1)
-    
-    FV = feature_vector.FeatureVector(list_a)
-    
-    if 0:
-        listOfFiles = utils.list_files()
-        f1 = utils.load_json_file(listOfFiles[0])
-        sentence = f1['sentences'][0]   #pick first sentence
-        token_index = 0 #first word in sentence
-        feature_matrix = FV.get_feature_matrix(token_index, sentence)
-    
-    
-
-    Lambda, misclassification_rates = train_perceptron(FV, train[:20], T_max = 25, LR = 10.0, mode='Trigger')   
-    plt.plot(misclassification_rates)    
-    
-    (y_hat, y) = test_perceptron(FV, Lambda, valid[:3])
-    errors = [1 for y1,y2 in zip(y_hat, y) if y1!=y2]
-    misclassification_rate = len(errors)/float(len(y))
-    
-if 0:
-    list_a = []
-    list_a.append(feature_vector.phi_argument_0)
-    list_a.append(feature_vector.phi_argument_1)
-    list_a.append(feature_vector.phi_argument_2)
-    list_a.append(feature_vector.phi_argument_3)
-    FV_arg = feature_vector.FeatureVector(list_a)
-
-    arg_index = 1
-    mat = FV_arg.get_feature_matrix_argument_prediction(token_index, arg_index, sentence)
-    
-    ml,gl = build_argument_data_batch('./bionlp2011genia-train-clean\\PMC-1310901-00-TIAB.json', FV_arg)
-    
+    #Argument prediction
+    FV_arg = feature_vector.FeatureVector('argument')
+    #listOfFiles = utils.list_files()
+    #f1 = utils.load_json_file(listOfFiles[0])
+    #sentence = f1['sentences'][0]   #pick first sentence
+    #mat = FV_arg.get_feature_matrix_argument_prediction(0, 2, sentence)
+    #ml,gl = build_argument_data_batch('./bionlp2011genia-train-clean\\PMC-1310901-00-TIAB.json', FV_arg)
     train,valid = utils.create_training_and_validation_file_lists(ratio = 0.75, load=True)    
-    Lambda, misclassification_rates = train_perceptron(FV_arg, train[:30], T_max = 20, LR = 10.0, mode='Argument')   
+    Lambda, misclassification_rates = train_perceptron(FV_arg, train[:10], T_max = 10, LR = 10.0, mode='Argument')   
+    plt.plot(misclassification_rates)
 
-    (y_hat, y) = test_perceptron(FV_arg, Lambda, valid[:3], 'Argument')
+    (y_hat, y) = test_perceptron(FV_arg, Lambda, valid[:5], mode='Argument')
     errors = [1 for y1,y2 in zip(y_hat, y) if y1!=y2]
-    misclassification_rate = len(errors)/float(len(y))
+    validation_error = len(errors)/float(len(y))
+    print (validation_error)
+
+
 
 if 1:
-    FV_arg = feature_vector.FeatureVector('argument')
-    
+    #trigger prediction 
+    FV_trig = feature_vector.FeatureVector('trigger')
+    Lambda, misclassification_rates = train_perceptron(FV_trig, train[:5], T_max = 10, LR = 10.0, mode='Trigger')   
+    plt.plot(misclassification_rates)
+
+    (y_hat, y) = test_perceptron(FV_trig, Lambda, valid[0:5], mode='Trigger')
+    errors = [1 for y1,y2 in zip(y_hat, y) if y1!=y2]
+    validation_error = len(errors)/float(len(y))  
+    print (validation_error)
     
     
     

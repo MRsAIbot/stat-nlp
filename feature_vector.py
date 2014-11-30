@@ -26,7 +26,8 @@ class FeatureVector():
         self.trigger_list = utils.get_trigger_list()
         self.stem_list = utils.create_stem_list()
 
-    #newest version. Finally includes features for every different class.
+
+    #Feature matrix for trigger prediction
     def get_feature_matrix(self, token_index, sentence):
         all_col_indices = []
         all_row_indices = []
@@ -53,8 +54,9 @@ class FeatureVector():
             
         return sparse_feature_matrix
         
+        
     #Get feature matrix for argument prediction: for pairs of tokens and 
-    #argument candidates.
+    #argument candidates. Otherwise same skeleton as "get_feature_matrix()"
     def get_feature_matrix_argument_prediction(self, token_index, arg_index, sentence):
         all_col_indices = []
         all_row_indices = []
@@ -82,34 +84,41 @@ class FeatureVector():
     
     
     
-    # feature template that takes as input a token x and its sentence (which is
+    # feature templates take as input a token_index and sentence (which is
     # a sentence from the json dictionary, containing all information about grammar
     # tags, links and relations to other tokens, their positions, and finally
     # also the gold labels for both triggers and arguments.) Note that the token
     # is not a string, but the index at which this token appears in sentence.
-    # This particular function is merely an example that returns a vector full of
-    # indicators whether different ASCII symbols are contained within the token.
-    
+    """TRIGGER FEATURES"""
     def phi_trigger_0(self, token_index, sentence):
-        token = sentence['tokens'][token_index]['word']
-        #can compute anything here: e.g. can compare token or stem with other words
         #This is merely an example for computing features across a comparison list.
+        token = sentence['tokens'][token_index]['word']
         symbols_list = string.printable
         return_vec = [ np.uint8(character in token)  for character in symbols_list]
         return return_vec      
     
-    # check for each grammar tag (NN, VP, etc.) if token is this grammatical object.
+    # check for each grammar tag (e.g. NN) if token is this grammatical pos tag.
     def phi_trigger_1(self, token_index, sentence):
-        observed_grammar_tag = sentence['tokens'][token_index]['pos']    #e.g. 'NN'
+        observed_grammar_tag = sentence['tokens'][token_index]['pos'] #e.g. 'NN'
         index = self.all_grammar_tags.index(observed_grammar_tag)
         
         unit_vec = np.zeros(len(self.all_grammar_tags), dtype = np.uint8)
         unit_vec[index] = 1.0
-        return list(unit_vec) #or return list(unit_vec) #or return sparsified unit_vec 
+        return list(unit_vec)
     
-    #extract if argument is a protein
+    def phi_trigger_2(self, token_index, sentence):
+        #evaluate stem of token.
+        observed_stem = sentence['tokens'][token_index]['stem'] 
+        unit_vec = np.zeros(len(self.stem_list), dtype = np.uint8)
+
+        if observed_stem in self.stem_list:
+            index = self.stem_list.index(observed_stem)
+            unit_vec[index] = 1.0
+        return list(unit_vec) 
+    
+    """ARGUMENT FEATURES"""
     def phi_argument_0(self, token_index, arg_index, sentence):
-        #argument = sentence['tokens'][arg_index]['word']
+        #extract if argument is a protein   (Mentions)
         protein = [0]
         for mention in sentence['mentions']:
             if arg_index >= mention['begin'] and arg_index < mention['end']:
@@ -117,22 +126,25 @@ class FeatureVector():
         return protein    
     
     def phi_argument_1(self, token_index, arg_index, sentence):
-        observed_grammar_tag = sentence['tokens'][arg_index]['pos']    #e.g. 'NN'
+        #evaluate grammar pos tag of argument
+        observed_grammar_tag = sentence['tokens'][arg_index]['pos']    
         index = self.all_grammar_tags.index(observed_grammar_tag)
         
         unit_vec = np.zeros(len(self.all_grammar_tags), dtype = np.uint8)
         unit_vec[index] = 1.0
-        return list(unit_vec) #or return list(unit_vec) #or return sparsified unit_vec   
+        return list(unit_vec) 
     
     def phi_argument_2(self, token_index, arg_index, sentence):
-        observed_grammar_tag = sentence['tokens'][token_index]['pos']    #e.g. 'NN'
+        #evaluate grammar pos tag of token
+        observed_grammar_tag = sentence['tokens'][token_index]['pos']
         index = self.all_grammar_tags.index(observed_grammar_tag)
         
         unit_vec = np.zeros(len(self.all_grammar_tags), dtype = np.uint8)
         unit_vec[index] = 1.0
-        return list(unit_vec) #or return list(unit_vec) #or return sparsified unit_vec   
+        return list(unit_vec)  
     
     def phi_argument_3(self, token_index, arg_index, sentence):
+        #evaluate stem of token.
         observed_stem = sentence['tokens'][token_index]['stem'] 
         unit_vec = np.zeros(len(self.stem_list), dtype = np.uint8)
 
