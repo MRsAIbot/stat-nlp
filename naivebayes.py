@@ -1,5 +1,6 @@
 import numpy as np
 from scipy.sparse import issparse
+from sklearn.preprocessing import LabelBinarizer
 
 class NaiveBayes(object):
 	"""docstring for NaiveBayes"""
@@ -27,8 +28,8 @@ class NaiveBayes(object):
 
 	def _update_feature_log_prob(self):
 		n_classes = len(self.classes_)
-		smoothed_fc = self.feature_count_ + self.alpha
-		smoothed_cc = self.class_count_ + self.alpha * n_classes
+		smoothed_fc = self.feature_count_ + self.k
+		smoothed_cc = self.class_count_ + self.k * n_classes
 
 		self.feature_log_prob_ = (np.log(smoothed_fc) - np.log(smoothed_cc.reshape(-1, 1)))
 
@@ -47,8 +48,11 @@ class NaiveBayes(object):
 
 		neg_prob = np.log(1 - np.exp(self.feature_log_prob_))
 		# Compute  neg_prob * (1 - X).T  as  sum(neg_prob - X * neg_prob)
-		jll = safe_sparse_dot(X, (self.feature_log_prob_ - neg_prob).T)
-		jll += self.class_log_prior_ + neg_prob.sum(axis=1)
+		jll = self.safe_sparse_dot(X, (self.feature_log_prob_ - neg_prob).T)
+		print self.class_log_prior_
+		print neg_prob.sum(axis=1)
+		self.class_log_prior_ + neg_prob.sum(axis=1)
+		#jll += self.class_log_prior_ + neg_prob.sum(axis=1)
 
 		return jll
 
@@ -98,7 +102,7 @@ class NaiveBayes(object):
 		pass
 
 	def _count(self, X, y):
-		self.feature_count = safe_sparse_dot(y.T, X)
+		self.feature_count = self.safe_sparse_dot(y.T, X)
 		self.class_count = y.sum(axis=0)
 
 	# Given a new set of datapoints, this function predict the class

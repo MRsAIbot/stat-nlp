@@ -8,7 +8,7 @@ import feature_vector
 import numpy as np
 import random
 from sklearn.naive_bayes import BernoulliNB
-import naivebayes as nb
+import naivebayes2 as nb
 
 # Create a list of .json file names
 def list_files(path="./bionlp2011genia-train-clean/*.json"):
@@ -92,13 +92,17 @@ def main():
 	print X
 	y = np.array([t.keys()[i] for i in [random.randint(0,9) for p in range(20)]])
 	print y
-	# NB = nbclf.NaiveBayes()
-	# NB.train(X,y)
-	# print(NB.predict(X[2]))
+	# a,b = X[2:3].shape
+	# print a
+	# print b
 
-	clf = BernoulliNB()
-	clf.fit(X,y)
-	print(clf.predict(X[2]))
+	NB = nb.NaiveBayes()
+	NB.train(X,y)
+	print(NB.predict(X[2]))
+
+	# clf = BernoulliNB()
+	# clf.fit(X,y)
+	# print(clf.predict(X[2]))
 
 
 if __name__ == '__main__':
