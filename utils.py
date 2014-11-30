@@ -38,6 +38,21 @@ def get_all_triggers(file_list):
 
 	return trigger_dict
  
+def get_trigger_list(load = True):
+    if load:
+        with open('trigger_list.data', 'rb') as f:
+            trigger_list = cPickle.load(f)
+    else:
+        file_list = list_files()
+        trigger_dict = get_all_triggers(file_list)
+        trigger_list = list(trigger_dict)
+        with open('trigger_list.data', 'wb') as f:
+            cPickle.dump(trigger_list, f)
+    return trigger_list
+     
+ 
+ 
+ 
 #Returns a dictionary with a count of all arguments (=labels of the relations)
 def get_all_arguments(file_list):
     argument_dict = defaultdict(int)
@@ -78,10 +93,22 @@ def identify_all_grammar_tags(file_list):
         plt.xlabel('Grammar Tag')
         plt.ylabel('Total Occurrence frequency')
         plt.xticks(range(len(str_keys)), str_keys , rotation=90)
-
     return grammar_dict
 
-
+def get_grammar_tag_list(load = True):
+    if load:
+        with open('grammar_tags_list.data', 'rb') as f:
+            gt_list = cPickle.load(f)
+    else:
+        file_list = list_files()
+        gt = identify_all_grammar_tags(file_list)
+        gt_list = list(gt)
+        with open('grammar_tags_list.data', 'wb') as f:
+            cPickle.dump(gt_list, f)
+    return gt_list
+    
+    
+    
 def identify_typical_trigger_word_stems():
     file_list = list_files()
     stem_dict = defaultdict(int)

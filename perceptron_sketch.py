@@ -206,7 +206,7 @@ if 0:
     errors = [1 for y1,y2 in zip(y_hat, y) if y1!=y2]
     misclassification_rate = len(errors)/float(len(y))
     
-if 1:
+if 0:
     list_a = []
     list_a.append(feature_vector.phi_argument_0)
     list_a.append(feature_vector.phi_argument_1)
@@ -220,7 +220,23 @@ if 1:
     ml,gl = build_argument_data_batch('./bionlp2011genia-train-clean\\PMC-1310901-00-TIAB.json', FV_arg)
     
     train,valid = utils.create_training_and_validation_file_lists(ratio = 0.75, load=True)    
-    Lambda, misclassification_rates = train_perceptron(FV_arg, train[:5], T_max = 1, LR = 10.0, mode='Argument')   
+    Lambda, misclassification_rates = train_perceptron(FV_arg, train[:5], T_max = 10, LR = 10.0, mode='Argument')   
 
+
+if 1:
+    FV_arg = feature_vector.FeatureVector('argument')
     
- 
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    

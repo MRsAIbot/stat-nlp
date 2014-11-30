@@ -3,22 +3,27 @@ import matplotlib.pyplot as plt
 import string
 from scipy.sparse import coo_matrix
 import utils
+import inspect
 
 """
 Class template for feature vectors. f(x,c)
 Extending the dictionary class to return 0 if one tries to acceess a feature vector for a missing key.
 An alternative implementation is commented below in case the method of extending the dict class is not adequate.
 """
-class FeatureVector(dict):
+class FeatureVector():
     # this extended dictionary class is initialised by passing a list of functions to it. These are then assigned as dictionary items upon init.
-    def __init__(self, phi_list,):
-        i=0
-        for phi in phi_list:
-            self[i]=phi
-            i+=1
+    def __init__(self, mode = 'argument'):
+        if mode not in ['argument', 'trigger']:
+            print 'ERROR, wrong mode of calling FeatureVector class! '
+        
+        #get handles to all phi functions
+        mm = inspect.getmembers(self, predicate=inspect.ismethod)        
+        self.phi_list = [method[1] for method in mm if 'phi_'+mode in method[0]]
+        
+        #load relevant other data from presaved files.
         self.listOfAllFiles = utils.list_files()
-        self.all_grammar_tags = list(utils.identify_all_grammar_tags(self.listOfAllFiles))
-        self.trigger_list = list(utils.get_all_triggers(self.listOfAllFiles) )
+        self.all_grammar_tags = utils.get_grammar_tag_list()
+        self.trigger_list = utils.get_trigger_list()
         self.stem_list = utils.create_stem_list()
 
     #newest version. Finally includes features for every different class.
@@ -29,8 +34,8 @@ class FeatureVector(dict):
         n_classes = 10  #length of list of all occurring triggers in dataset.
         for c in range(n_classes):
             d=0
-            for phi in self:
-                phi_vector = self[phi](token_index, sentence, self.all_grammar_tags)
+            for phi in self.phi_list:
+                phi_vector = phi(token_index, sentence)
     
                 index = list(np.nonzero(np.array(phi_vector))[0])
                 all_col_indices += [i+d for i in index]    # offset d in matrix                
@@ -57,8 +62,8 @@ class FeatureVector(dict):
         n_classes = 3  #possible predictions: [None, Theme, Cause]
         for c in range(n_classes):
             d=0
-            for phi in self:
-                phi_vector = self[phi](token_index, arg_index, sentence, self.all_grammar_tags)
+            for phi in self.phi_list:
+                phi_vector = phi(token_index, arg_index, sentence)
     
                 index = list(np.nonzero(np.array(phi_vector))[0])
                 all_col_indices += [i+d for i in index]    # offset d in matrix                
@@ -75,75 +80,68 @@ class FeatureVector(dict):
                                             shape=(n_classes,d))
             
         return sparse_feature_matrix
-
-
-
-# feature template that takes as input a token x and its sentence (which is
-# a sentence from the json dictionary, containing all information about grammar
-# tags, links and relations to other tokens, their positions, and finally
-# also the gold labels for both triggers and arguments.) Note that the token
-# is not a string, but the index at which this token appears in sentence.
-# This particular function is merely an example that returns a vector full of
-# indicators whether different ASCII symbols are contained within the token.
-
-def phi_alternative_0(token_index, sentence, all_grammar_tags):
-    token = sentence['tokens'][token_index]['word']
-    stem = sentence['tokens'][token_index]['stem']
-    #can compute anything here: e.g. can compare token or stem with other words
-    #This is merely an example for computing features across a comparison list.
-    symbols_list = string.printable
-    return_vec = [ np.uint8(character in token)  for character in symbols_list]
     
-    return return_vec
     
-
-# check for each grammar tag (NN, VP, etc.) if token is this grammatical object.
-def phi_alternative_1(token_index, sentence, all_grammar_tags):
-    observed_grammar_tag = sentence['tokens'][token_index]['pos']    #e.g. 'NN'
-    index = all_grammar_tags.index(observed_grammar_tag)
     
-    unit_vec = np.zeros(len(all_grammar_tags), dtype = np.uint8)
-    unit_vec[index] = 1.0
-    return list(unit_vec) #or return list(unit_vec) #or return sparsified unit_vec 
-
-
-
-#extract if argument is a protein
-def phi_argument_0(token_index, arg_index, sentence, comparison_list):
-    #argument = sentence['tokens'][arg_index]['word']
-    protein = [0]
-    for mention in sentence['mentions']:
-        if arg_index >= mention['begin'] and arg_index < mention['end']:
-            protein = [1]
-    return protein
-
-
-def phi_argument_1(token_index, arg_index, sentence, all_grammar_tags):
-    observed_grammar_tag = sentence['tokens'][arg_index]['pos']    #e.g. 'NN'
-    index = all_grammar_tags.index(observed_grammar_tag)
+    # feature template that takes as input a token x and its sentence (which is
+    # a sentence from the json dictionary, containing all information about grammar
+    # tags, links and relations to other tokens, their positions, and finally
+    # also the gold labels for both triggers and arguments.) Note that the token
+    # is not a string, but the index at which this token appears in sentence.
+    # This particular function is merely an example that returns a vector full of
+    # indicators whether different ASCII symbols are contained within the token.
     
-    unit_vec = np.zeros(len(all_grammar_tags), dtype = np.uint8)
-    unit_vec[index] = 1.0
-    return list(unit_vec) #or return list(unit_vec) #or return sparsified unit_vec 
-
-
-def phi_argument_2(token_index, arg_index, sentence, all_grammar_tags):
-    observed_grammar_tag = sentence['tokens'][token_index]['pos']    #e.g. 'NN'
-    index = all_grammar_tags.index(observed_grammar_tag)
+    def phi_trigger_0(self, token_index, sentence):
+        token = sentence['tokens'][token_index]['word']
+        #can compute anything here: e.g. can compare token or stem with other words
+        #This is merely an example for computing features across a comparison list.
+        symbols_list = string.printable
+        return_vec = [ np.uint8(character in token)  for character in symbols_list]
+        return return_vec      
     
-    unit_vec = np.zeros(len(all_grammar_tags), dtype = np.uint8)
-    unit_vec[index] = 1.0
-    return list(unit_vec) #or return list(unit_vec) #or return sparsified unit_vec 
-
-
-def phi_argument_3(token_index, arg_index, sentence, comparison_list):
-    observed_stem = sentence['tokens'][token_index]['stem']    
-    index = comparison_list.index(observed_stem)
+    # check for each grammar tag (NN, VP, etc.) if token is this grammatical object.
+    def phi_trigger_1(self, token_index, sentence):
+        observed_grammar_tag = sentence['tokens'][token_index]['pos']    #e.g. 'NN'
+        index = self.all_grammar_tags.index(observed_grammar_tag)
+        
+        unit_vec = np.zeros(len(self.all_grammar_tags), dtype = np.uint8)
+        unit_vec[index] = 1.0
+        return list(unit_vec) #or return list(unit_vec) #or return sparsified unit_vec 
     
-    unit_vec = np.zeros(len(comparison_list), dtype = np.uint8)
-    unit_vec[index] = 1.0
-    return list(unit_vec) 
+    #extract if argument is a protein
+    def phi_argument_0(self, token_index, arg_index, sentence):
+        #argument = sentence['tokens'][arg_index]['word']
+        protein = [0]
+        for mention in sentence['mentions']:
+            if arg_index >= mention['begin'] and arg_index < mention['end']:
+                protein = [1]
+        return protein    
+    
+    def phi_argument_1(self, token_index, arg_index, sentence):
+        observed_grammar_tag = sentence['tokens'][arg_index]['pos']    #e.g. 'NN'
+        index = self.all_grammar_tags.index(observed_grammar_tag)
+        
+        unit_vec = np.zeros(len(self.all_grammar_tags), dtype = np.uint8)
+        unit_vec[index] = 1.0
+        return list(unit_vec) #or return list(unit_vec) #or return sparsified unit_vec   
+    
+    def phi_argument_2(self, token_index, arg_index, sentence):
+        observed_grammar_tag = sentence['tokens'][token_index]['pos']    #e.g. 'NN'
+        index = self.all_grammar_tags.index(observed_grammar_tag)
+        
+        unit_vec = np.zeros(len(self.all_grammar_tags), dtype = np.uint8)
+        unit_vec[index] = 1.0
+        return list(unit_vec) #or return list(unit_vec) #or return sparsified unit_vec   
+    
+    def phi_argument_3(self, token_index, arg_index, sentence):
+        observed_stem = sentence['tokens'][token_index]['stem'] 
+        unit_vec = np.zeros(len(self.stem_list), dtype = np.uint8)
 
+        if observed_stem in self.stem_list:
+            index = self.stem_list.index(observed_stem)
+            unit_vec[index] = 1.0
+        return list(unit_vec) 
+    
 
 
 
