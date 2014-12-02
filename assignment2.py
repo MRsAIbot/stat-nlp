@@ -9,6 +9,7 @@ import numpy as np
 import random
 from sklearn.naive_bayes import BernoulliNB
 import naivebayes2 as nb
+import warnings
 
 # Create a list of .json file names
 def list_files(path="./bionlp2011genia-train-clean/*.json"):
@@ -45,6 +46,70 @@ def get_all_arguments(file_list):
                 for argument in arguments_list:
                     argument_dict[argument['gold']] += 1
     return argument_dict
+
+
+#generate one training batch in perceptron algorithm for event triggers. 
+#output: For all events in file file_name: the features (matrix) & triggers
+def build_trigger_data_batch(file_name, FV):
+	trigger_list = []
+	token_index_list = []
+	sentence_list = []
+	f_json = json.load(open(file_name))
+
+	for sentence in f_json['sentences']:
+		event_candidates_list = sentence['eventCandidates']
+		for event in event_candidates_list:
+			token_index_list.append( event['begin'] )
+			sentence_list.append(sentence)
+			trigger_list += [ event['gold'] ]
+
+	matrix_list = []
+	for token_index,sentence in zip(token_index_list, sentence_list):
+		matrix_list.append( FV.get_feature_matrix(token_index, sentence) )
+
+	return matrix_list, trigger_list
+            
+
+#generate one training batch in perceptron algorithm for argument labels. 
+#output: For all argument candidates in file file_name: 
+#the features (matrix) & gold label of the trigger-argument relation
+def build_argument_data_batch(file_name, FV):
+	gold_list = []
+	matrix_list = []
+	f_json = json.load(open(file_name))    
+	for sentence in f_json['sentences']:
+		event_candidates_list = sentence['eventCandidates']
+		for event in event_candidates_list:
+			argumentslist = event['arguments']
+			for argument in argumentslist:
+				arg_index = argument['begin']
+				token_index = event['begin'] 
+				matrix_list.append( FV.get_feature_matrix_argument_prediction(token_index, arg_index, sentence) )
+				gold_list.append( argument['gold'] )
+	return matrix_list, gold_list
+
+
+def build_dataset(file_list, mode='trig', clf='nb'):
+	"""
+	This function construct the data matrix X and target vector y.
+
+	Arguments:
+	- clf: string -> 'nb' for naivebayes, 'perc' for perceptron
+
+	Output:
+	- X: data matrix which depends per type of classifier specified by mode
+	- y: vector of classes
+	"""
+	X = np.zeros((1,1))
+	y = np.zeros(1)
+	for file_index, file_name in enumerate(file_list):
+		print 'Building test data from json file ',i_f , 'of', len(file_list)
+		if mode == 'trig':
+			(feat_list_one_file, gold_list_one_file) = build_trigger_data_batch(filename, FV)
+		elif mode == 'arg':
+			(feat_list_one_file, gold_list_one_file) = build_argument_data_batch(filename, FV)
+		else:
+			warnings.warn('Error in test_perceptron: Must have mode "Trigger" or "Argument"!' )
 
 
 def main():
