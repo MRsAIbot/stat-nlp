@@ -58,4 +58,7 @@ target/
 
 # Data file
 bionlp2011genia-train-clean/
-*.data
+Xy_train_trig_nb.data
+Xy_valid_trig_nb.data
+Xy_train_arg_nb.data
+Xy_valid_arg_nb.data
