@@ -10,6 +10,7 @@ import random
 from scipy.sparse import vstack
 from sklearn.naive_bayes import BernoulliNB
 import naivebayes2 as nb
+import utils
 import warnings
 
 # Create a list of .json file names
@@ -162,28 +163,31 @@ def main():
 	# print("Number of relation arguments: {0}".format(len(arg.keys())))
 	# pprint(arg)
 
-	# Test of sparse vectors
-	list_a = []
-	list_a.append(feature_vector.phi_alternative_0)
-	list_a.append(feature_vector.phi_alternative_1)
+	# # Test of sparse vectors
+	# list_a = []
+	# list_a.append(feature_vector.phi_alternative_0)
+	# list_a.append(feature_vector.phi_alternative_1)
 
-	# listOfFiles = list_files()
-	f1 = load_json_file(list_of_files[0])
-	sentence = f1['sentences'][0]   #pick first sentence
-	token_index = 0 #first word in sentence
+	# # listOfFiles = list_files()
+	# f1 = load_json_file(list_of_files[0])
+	# sentence = f1['sentences'][0]   #pick first sentence
+	# token_index = 0 #first word in sentence
 
-	grammar_dict = feature_vector.identify_all_grammar_tags(list_of_files)   
-	all_grammar_tags = grammar_dict.keys()  #these lists should be saved and later loaded.
+	# grammar_dict = feature_vector.identify_all_grammar_tags(list_of_files)   
+	# all_grammar_tags = grammar_dict.keys()  #these lists should be saved and later loaded.
 
-	f_v=feature_vector.FeatureVector(list_a)
-	vec = f_v.get_vector_alternative( token_index, sentence, all_grammar_tags)
+	# f_v=feature_vector.FeatureVector(list_a)
+	# vec = f_v.get_vector_alternative( token_index, sentence, all_grammar_tags)
 
-	if 1:
-		f_matrix = f_v.get_feature_batch( [0,1,2], [sentence]*3, all_grammar_tags)
-		print np.array(f_matrix.todense())
-		print f_matrix.col
-		print f_matrix.row
-		print f_matrix.data
+	# if 1:
+	# 	f_matrix = f_v.get_feature_batch( [0,1,2], [sentence]*3, all_grammar_tags)
+	# 	print np.array(f_matrix.todense())
+	# 	print f_matrix.col
+	# 	print f_matrix.row
+	# 	print f_matrix.data
+
+	# Read data
+	FV_trig = feature_vector.FeatureVector('Trigger')
 
 	# Test Naive Bayes
 	X = np.random.randint(2, size=(20,100))
