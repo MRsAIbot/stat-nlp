@@ -147,16 +147,16 @@ def build_dataset(file_list, FV, mode='trig', clf='nb'):
 
 
 def main():
-	# Just testing my functions a bit
-	list_of_files = list_files()
-	print (list_of_files[0])
-	f1 = load_json_file(list_of_files[0])
-	pprint(len(f1['sentences']))
+	# # Just testing my functions a bit
+	# list_of_files = list_files()
+	# print (list_of_files[0])
+	# f1 = load_json_file(list_of_files[0])
+	# pprint(len(f1['sentences']))
 	    
-	# Finding and counting all event triggers
-	t = get_all_triggers(list_of_files)
-	print("Number of distinct event triggers: {0}".format(len(t.keys())))
-	pprint(t)
+	# # Finding and counting all event triggers
+	# t = get_all_triggers(list_of_files)
+	# print("Number of distinct event triggers: {0}".format(len(t.keys())))
+	# pprint(t)
 
 	# # Finding and counting all possible arguments (=relationship labels)
 	# arg = get_all_arguments(list_of_files)
@@ -188,24 +188,27 @@ def main():
 
 	# Read data
 	FV_trig = feature_vector.FeatureVector('Trigger')
+	train_list, valid_list = utils.create_training_and_validation_file_lists()
+	print train_list
+	print valid_list
 
-	# Test Naive Bayes
-	X = np.random.randint(2, size=(20,100))
-	print X
-	y = np.array([t.keys()[i] for i in [random.randint(0,9) for p in range(20)]])
-	print y
-	# a,b = X[2:3].shape
-	# print a
-	# print b
+	# # Test Naive Bayes
+	# X = np.random.randint(2, size=(20,100))
+	# print X
+	# y = np.array([t.keys()[i] for i in [random.randint(0,9) for p in range(20)]])
+	# print y
+	# # a,b = X[2:3].shape
+	# # print a
+	# # print b
 
-	NB = nb.NaiveBayes()
-	NB.train(X,y)
-	print(NB.predict(X))
-	CM, prec, rec, F1 = NB.evaluate(X,y)
-	print prec
-	print rec
-	print F1
-	print CM
+	# NB = nb.NaiveBayes()
+	# NB.train(X,y)
+	# print(NB.predict(X))
+	# CM, prec, rec, F1 = NB.evaluate(X,y)
+	# print prec
+	# print rec
+	# print F1
+	# print CM
 
 	# clf = BernoulliNB()
 	# clf.fit(X,y)
