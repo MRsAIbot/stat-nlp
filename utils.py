@@ -128,27 +128,29 @@ def identify_typical_trigger_word_stems():
     return stem_dict
 
 
-def create_training_and_validation_file_lists(ratio = 0.75, load = True):
+def create_training_and_validation_file_lists(file_list, ratio = 0.75, load = True):
     #ratio determines the ratio between training and validation set size
 
     if load == True:    #load previously saved splitting into train-valid sets
         print 'Loading predetermined training/validation splitting from file.'
         f = open('training_validation_files',"rb")
-        t,v = cPickle.load(f)
-        return t,v
+        train_ind, valid_ind = cPickle.load(f)
+        f.close()
+        training_files = [file_list[i] for i in train_ind]
+        validation_files = [file_list[i] for i in valid_ind]
+        return training_files, validation_files
 
     else:
-        all_files = list_files()
-        L = len(all_files)
+        L = len(file_list)
         
         perm = np.random.permutation(L)
         split_index = np.int(np.floor(L*ratio))
         
-        training_files   = [all_files[p] for p in perm[ :split_index] ]
-        validation_files = [all_files[p] for p in perm[split_index: ] ]
+        training_files   = [file_list[p] for p in perm[ :split_index] ]
+        validation_files = [file_list[p] for p in perm[split_index: ] ]
     
         #save to file.
-        savedata = (training_files, validation_files)
+        savedata = (perm[:split_index], perm[split_index:])
         f = open('training_validation_files',"w")
         cPickle.dump(savedata, f)
         f.close()

@@ -1,7 +1,7 @@
 import glob
 import json
 import nltk
-import pickle # Not used yet, but might be useful later
+import cPickle # Not used yet, but might be useful later
 from collections import defaultdict
 from pprint import pprint
 import feature_vector
@@ -56,7 +56,7 @@ def build_trigger_data_batch(file_name, FV, clf):
 	trigger_list = []
 	token_index_list = []
 	sentence_list = []
-	f_json = json.load(open(file_name))
+	f_json = load_json_file(file_name)
 
 	for sentence in f_json['sentences']:
 		event_candidates_list = sentence['eventCandidates']
@@ -69,11 +69,13 @@ def build_trigger_data_batch(file_name, FV, clf):
 	for token_index,sentence in zip(token_index_list, sentence_list):
 		matrix_list.append( FV.get_feature_matrix(token_index, sentence, clf) )
 
+	if len(matrix_list) == 0:
+		return None, None
+	
 	if clf=='perc':
 		return matrix_list, trigger_list
 	elif clf=='nb':
 		return vstack(matrix_list), trigger_list	
-            
 
 #generate one training batch in perceptron algorithm for argument labels. 
 #output: For all argument candidates in file file_name: 
@@ -81,7 +83,8 @@ def build_trigger_data_batch(file_name, FV, clf):
 def build_argument_data_batch(file_name, FV, clf):
 	gold_list = []
 	matrix_list = []
-	f_json = json.load(open(file_name))    
+	f_json = load_json_file(file_name)
+
 	for sentence in f_json['sentences']:
 		event_candidates_list = sentence['eventCandidates']
 		for event in event_candidates_list:
@@ -97,61 +100,77 @@ def build_argument_data_batch(file_name, FV, clf):
 		return vstack(matrix_list), gold_list
 
 
-def build_dataset(file_list, FV, mode='trig', clf='nb'):
+def build_dataset(file_list, FV, kind='train', mode='trig', clf='nb', load=True):
 	"""
 	This function construct the data matrix X and target vector y.
 
 	Arguments:
 	- clf: string -> 'nb' for naivebayes, 'perc' for perceptron
+	- kind: string -> 'train' or 'valid' or 'test'
 
 	Output:
 	- X: data matrix which depends per type of classifier specified by mode
 	- y: vector of classes
 	"""
-	if clf == 'nb':
-		for file_index, file_name in enumerate(file_list):
-			print 'Building test data from json file ',file_index , 'of', len(file_list)
-			if mode == 'trig':
-				if file_index == 0:
-					X, y = build_trigger_data_batch(file_name, FV, clf='nb')
-				else:
-					(new_features, new_gold) = build_trigger_data_batch(file_name, FV, clf='nb')
-					X = vstack((X,new_features))
-					y += new_gold
-			if mode == 'arg':
-				if file_index == 0:
-					X, y = build_argument_data_batch(file_name, FV, clf='nb')
-				else:
-					(new_features, new_gold) = build_argument_data_batch(file_name, FV, clf='nb')
-					X = vstack((X,new_features))
-					y += new_gold
-			else:
-				warnings.warn('Error in build_dataset: Must have mode "Trigger" or "Argument"!')
-	elif clf == 'perc':
-		X = []
-		y = []
-		for file_index, file_name in enumerate(file_list):
-			print 'Building test data from json file ',file_index , 'of', len(file_list)
-			if mode == 'trig':
-				(feat_list_one_file, gold_list_one_file) = build_trigger_data_batch(filename, FV, clf='perc')
-			elif mode == 'arg':
-				(feat_list_one_file, gold_list_one_file) = build_argument_data_batch(filename, FV, clf='perc')
-			else:
-				warnings.warn('Error in build_dataset: Must have mode "Trigger" or "Argument"!' )
-			X += feat_list_one_file
-			y += gold_list_one_file
+	if load:
+		print 'Loading X matrix and y from file.'
+		file_name_pickle = "Xy_{0}_{1}_{2}.data".format(kind,mode,clf)
+		f = open(file_name_pickle,"rb")
+		X, y = cPickle.load(f)
+		f.close()
+		return X, y
 	else:
-		warnings.warn('Error in build_dataset: Must have clf "nb" or "perc"!')
+		if clf == 'nb':
+			for file_index, file_name in enumerate(file_list):
+				print 'Building test data from json file ',file_index , 'of', len(file_list)
+				if mode == 'trig':
+					if file_index == 0:
+						X, y = build_trigger_data_batch(file_name, FV, clf='nb')
+					else:
+						(new_features, new_gold) = build_trigger_data_batch(file_name, FV, clf='nb')
+						if new_features == None:
+							continue
+						else:
+							X = vstack((X,new_features))
+							y += new_gold
+				if mode == 'arg':
+					if file_index == 0:
+						X, y = build_argument_data_batch(file_name, FV, clf='nb')
+					else:
+						(new_features, new_gold) = build_argument_data_batch(file_name, FV, clf='nb')
+						X = vstack((X,new_features))
+						y += new_gold
+				else:
+					warnings.warn('Error in build_dataset: Must have mode "Trigger" or "Argument"!')
+		elif clf == 'perc':
+			X = []
+			y = []
+			for file_index, file_name in enumerate(file_list):
+				print 'Building test data from json file ',file_index , 'of', len(file_list)
+				if mode == 'trig':
+					(feat_list_one_file, gold_list_one_file) = build_trigger_data_batch(filename, FV, clf='perc')
+				elif mode == 'arg':
+					(feat_list_one_file, gold_list_one_file) = build_argument_data_batch(filename, FV, clf='perc')
+				else:
+					warnings.warn('Error in build_dataset: Must have mode "Trigger" or "Argument"!' )
+				X += feat_list_one_file
+				y += gold_list_one_file
+		else:
+			warnings.warn('Error in build_dataset: Must have clf "nb" or "perc"!')
 
-	return X,y
+		file_name_pickle = "Xy_{0}_{1}_{2}.data".format(kind,mode,clf)
+		f = open(file_name_pickle,"w")
+		cPickle.dump((X,y),f)
+		f.close()
+		return X, y
 
 
 def main():
-	# # Just testing my functions a bit
-	# list_of_files = list_files()
+	# Just testing my functions a bit
+	list_of_files = list_files()
 	# print (list_of_files[0])
-	# f1 = load_json_file(list_of_files[0])
-	# pprint(len(f1['sentences']))
+	f1 = load_json_file(list_of_files[0])
+	pprint(len(f1['sentences']))
 	    
 	# # Finding and counting all event triggers
 	# t = get_all_triggers(list_of_files)
@@ -187,10 +206,33 @@ def main():
 	# 	print f_matrix.data
 
 	# Read data
-	FV_trig = feature_vector.FeatureVector('Trigger')
-	train_list, valid_list = utils.create_training_and_validation_file_lists()
-	print train_list
-	print valid_list
+	FV_trig = feature_vector.FeatureVector('trigger')
+	train_list, valid_list = utils.create_training_and_validation_file_lists(list_of_files)
+
+	X_train, y_train = build_dataset(train_list, FV_trig, kind='train', mode='trig', clf='nb', load=True)
+	X_valid, y_valid = build_dataset(valid_list, FV_trig, kind='valid', mode='trig', clf='nb', load=True)
+
+	#print X_train, y_train
+	print X_train.shape
+	print len(y_train)
+	print X_valid.shape
+	print len(y_valid)
+	#print X_valid, y_valid
+
+	NB = nb.NaiveBayes()
+	NB.train(np.asarray(X_train.todense()),np.asarray(y_train))
+
+	CM, prec, rec, F1 = NB.evaluate(np.asarray(X_train.todense()), np.asarray(y_train))
+	print prec
+	print rec
+	print F1
+	print np.int64(CM)
+
+	CM, prec, rec, F1 = NB.evaluate(np.asarray(X_valid.todense()), np.asarray(y_valid))
+	print prec
+	print rec
+	print F1
+	print np.int64(CM)
 
 	# # Test Naive Bayes
 	# X = np.random.randint(2, size=(20,100))
@@ -211,7 +253,7 @@ def main():
 	# print CM
 
 	# clf = BernoulliNB()
-	# clf.fit(X,y)
+	# clf.fit(X_train,y_train)
 	# print(clf.predict(X))
 
 
