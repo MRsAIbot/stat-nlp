@@ -7,6 +7,7 @@ from pprint import pprint
 import feature_vector
 import numpy as np
 import random
+from scipy.sparse import vstack
 from sklearn.naive_bayes import BernoulliNB
 import naivebayes2 as nb
 import warnings
@@ -50,7 +51,7 @@ def get_all_arguments(file_list):
 
 #generate one training batch in perceptron algorithm for event triggers. 
 #output: For all events in file file_name: the features (matrix) & triggers
-def build_trigger_data_batch(file_name, FV):
+def build_trigger_data_batch(file_name, FV, clf):
 	trigger_list = []
 	token_index_list = []
 	sentence_list = []
@@ -65,15 +66,18 @@ def build_trigger_data_batch(file_name, FV):
 
 	matrix_list = []
 	for token_index,sentence in zip(token_index_list, sentence_list):
-		matrix_list.append( FV.get_feature_matrix(token_index, sentence) )
+		matrix_list.append( FV.get_feature_matrix(token_index, sentence, clf) )
 
-	return matrix_list, trigger_list
+	if clf=='perc':
+		return matrix_list, trigger_list
+	elif clf=='nb':
+		return vstack(matrix_list), trigger_list	
             
 
 #generate one training batch in perceptron algorithm for argument labels. 
 #output: For all argument candidates in file file_name: 
 #the features (matrix) & gold label of the trigger-argument relation
-def build_argument_data_batch(file_name, FV):
+def build_argument_data_batch(file_name, FV, clf):
 	gold_list = []
 	matrix_list = []
 	f_json = json.load(open(file_name))    
@@ -84,12 +88,15 @@ def build_argument_data_batch(file_name, FV):
 			for argument in argumentslist:
 				arg_index = argument['begin']
 				token_index = event['begin'] 
-				matrix_list.append( FV.get_feature_matrix_argument_prediction(token_index, arg_index, sentence) )
+				matrix_list.append( FV.get_feature_matrix_argument_prediction(token_index, arg_index, sentence, clf) )
 				gold_list.append( argument['gold'] )
-	return matrix_list, gold_list
+	if clf=='perc':
+		return matrix_list, gold_list
+	elif clf=='nb':
+		return vstack(matrix_list), gold_list
 
 
-def build_dataset(file_list, mode='trig', clf='nb'):
+def build_dataset(file_list, FV, mode='trig', clf='nb'):
 	"""
 	This function construct the data matrix X and target vector y.
 
@@ -100,16 +107,42 @@ def build_dataset(file_list, mode='trig', clf='nb'):
 	- X: data matrix which depends per type of classifier specified by mode
 	- y: vector of classes
 	"""
-	X = np.zeros((1,1))
-	y = np.zeros(1)
-	for file_index, file_name in enumerate(file_list):
-		print 'Building test data from json file ',i_f , 'of', len(file_list)
-		if mode == 'trig':
-			(feat_list_one_file, gold_list_one_file) = build_trigger_data_batch(filename, FV)
-		elif mode == 'arg':
-			(feat_list_one_file, gold_list_one_file) = build_argument_data_batch(filename, FV)
-		else:
-			warnings.warn('Error in test_perceptron: Must have mode "Trigger" or "Argument"!' )
+	if clf == 'nb':
+		for file_index, file_name in enumerate(file_list):
+			print 'Building test data from json file ',file_index , 'of', len(file_list)
+			if mode == 'trig':
+				if file_index == 0:
+					X, y = build_trigger_data_batch(file_name, FV, clf='nb')
+				else:
+					(new_features, new_gold) = build_trigger_data_batch(file_name, FV, clf='nb')
+					X = vstack((X,new_features))
+					y += new_gold
+			if mode == 'arg':
+				if file_index == 0:
+					X, y = build_argument_data_batch(file_name, FV, clf='nb')
+				else:
+					(new_features, new_gold) = build_argument_data_batch(file_name, FV, clf='nb')
+					X = vstack((X,new_features))
+					y += new_gold
+			else:
+				warnings.warn('Error in build_dataset: Must have mode "Trigger" or "Argument"!')
+	elif clf == 'perc':
+		X = []
+		y = []
+		for file_index, file_name in enumerate(file_list):
+			print 'Building test data from json file ',file_index , 'of', len(file_list)
+			if mode == 'trig':
+				(feat_list_one_file, gold_list_one_file) = build_trigger_data_batch(filename, FV, clf='perc')
+			elif mode == 'arg':
+				(feat_list_one_file, gold_list_one_file) = build_argument_data_batch(filename, FV, clf='perc')
+			else:
+				warnings.warn('Error in build_dataset: Must have mode "Trigger" or "Argument"!' )
+			X += feat_list_one_file
+			y += gold_list_one_file
+	else:
+		warnings.warn('Error in build_dataset: Must have clf "nb" or "perc"!')
+
+	return X,y
 
 
 def main():
