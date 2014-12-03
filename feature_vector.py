@@ -13,12 +13,19 @@ An alternative implementation is commented below in case the method of extending
 class FeatureVector():
     # this extended dictionary class is initialised by passing a list of functions to it. These are then assigned as dictionary items upon init.
     def __init__(self, mode = 'argument'):
-        if mode not in ['argument', 'trigger']:
+        if mode not in ['argument', 'trigger', 'joint']:
             print 'ERROR, wrong mode of calling FeatureVector class! '
+
         
         #get handles to all phi functions
-        mm = inspect.getmembers(self, predicate=inspect.ismethod)        
-        self.phi_list = [method[1] for method in mm if 'phi_'+mode in method[0]]
+        self.methods = inspect.getmembers(self, predicate=inspect.ismethod)  
+        self.mode = mode    
+        if self.mode == 'argument' or self.mode == 'trigger':                   
+            self.phi_list = [method[1] for method in self.methods if 'phi_'+mode in method[0]]
+        elif mode == 'joint':
+            self.phi_list_arg = [method[1] for method in self.methods if 'phi_argument' in method[0]]
+            self.phi_list_trig = [method[1] for method in self.methods if 'phi_trigger' in method[0]]
+            
         
         #load relevant other data from presaved files.
         self.listOfAllFiles = utils.list_files()
@@ -29,25 +36,34 @@ class FeatureVector():
 
     #Feature matrix for trigger prediction
     def get_feature_matrix(self, token_index, sentence):
-        all_col_indices = []
-        all_row_indices = []
+        col_indices = []
         values = []
         n_classes = 10  #length of list of all occurring triggers in dataset.
+        d=0
+        if self.mode == 'trigger':
+            phi_list = self.phi_list
+        elif self.mode == 'joint':
+            phi_list = self.phi_list_trig
+        else:
+            print 'ERROR: WRONG USE OF FUNCTION get_feature_matrix()'
+            
+        for phi in phi_list:
+            phi_vector = phi(token_index, sentence)
+            index = list(np.nonzero(np.array(phi_vector))[0])
+            col_indices += [i+d for i in index]    # offset d in matrix       
+            values += list(np.array(phi_vector)[index])            
+            d += len(phi_vector)
+
+        all_col_indices = []
+        all_row_indices = []
+        all_values = []
         for c in range(n_classes):
-            d=0
-            for phi in self.phi_list:
-                phi_vector = phi(token_index, sentence)
-    
-                index = list(np.nonzero(np.array(phi_vector))[0])
-                all_col_indices += [i+d for i in index]    # offset d in matrix                
-                all_row_indices += [c]*len(index)
-                
-                values += list(np.array(phi_vector)[index])
-                
-                d += len(phi_vector)
-             
+            all_row_indices += [c]*len(values)       
+            all_col_indices += col_indices
+            all_values += values        
+         
         
-        sparse_feature_matrix = coo_matrix((np.array(values), 
+        sparse_feature_matrix = coo_matrix((np.array(all_values), 
                                            (np.asarray(all_row_indices),
                                             np.array(all_col_indices) ) ),
                                             shape=(n_classes,d))
@@ -58,24 +74,37 @@ class FeatureVector():
     #Get feature matrix for argument prediction: for pairs of tokens and 
     #argument candidates. Otherwise same skeleton as "get_feature_matrix()"
     def get_feature_matrix_argument_prediction(self, token_index, arg_index, sentence):
-        all_col_indices = []
-        all_row_indices = []
+        col_indices = []
         values = []
+        d=0
         n_classes = 3  #possible predictions: [None, Theme, Cause]
-        for c in range(n_classes):
-            d=0
-            for phi in self.phi_list:
+        
+        if self.mode == 'argument':
+            phi_list = self.phi_list
+        elif self.mode == 'joint':
+            phi_list = self.phi_list_arg
+        else:
+            print 'ERROR: WRONG USE OF FUNCTION get_feature_matrix_argument_prediction()'
+         
+            
+        
+        for phi in phi_list:
                 phi_vector = phi(token_index, arg_index, sentence)
                 index = list(np.nonzero(np.array(phi_vector))[0])
-                all_col_indices += [i+d for i in index]    # offset d in matrix                
-                all_row_indices += [c]*len(index)
-                
+                col_indices += [i+d for i in index]    # offset d in matrix                
                 values += list(np.array(phi_vector)[index])
-                
                 d += len(phi_vector)
-             
+
         
-        sparse_feature_matrix = coo_matrix((np.array(values), 
+        all_col_indices = []
+        all_row_indices = []
+        all_values = []                
+        for c in range(n_classes):
+            all_col_indices += col_indices            
+            all_row_indices += [c]*len(values)
+            all_values += values        
+        
+        sparse_feature_matrix = coo_matrix((np.array(all_values), 
                                            (np.asarray(all_row_indices),
                                             np.array(all_col_indices) ) ),
                                             shape=(n_classes,d))

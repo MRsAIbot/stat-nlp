@@ -81,7 +81,7 @@ def build_argument_data_batch(file_name, FV):
                                                        arg_index, sentence) )
                 gold_list.append( argument['gold'] )
     return matrix_list, gold_list
-    
+   
     
 # create predictions for test set
 def test_perceptron(FV, Lambda, file_list, mode):
@@ -125,8 +125,6 @@ def predict(feature_matrix, Lambda):
     highest_score = max(scores)
     predicted_class = scores.index(highest_score)
     return predicted_class
-    
-    
 
 
 def train_perceptron(FV, training_files, T_max = 1, LR = 1.0, mode = 'Trigger'):
@@ -146,7 +144,7 @@ def train_perceptron(FV, training_files, T_max = 1, LR = 1.0, mode = 'Trigger'):
         
         feature_list += feat_list_one_file
         gold_list += gold_list_one_file
-            
+    
     feature_list, gold_list = subsample(feature_list, gold_list, subsampling_rate = 0.95)    
     N_classes, N_dims = feature_list[0].shape
     N_samples = len(feature_list)
@@ -200,17 +198,17 @@ if 0:
     #mat = FV_arg.get_feature_matrix_argument_prediction(0, 2, sentence)
     #ml,gl = build_argument_data_batch('./bionlp2011genia-train-clean\\PMC-1310901-00-TIAB.json', FV_arg)
     train,valid = utils.create_training_and_validation_file_lists(ratio = 0.75, load=True)    
-    Lambda, misclassification_rates = train_perceptron(FV_arg, train[:10], T_max = 10, LR = 10.0, mode='Argument')   
+    Lambda, misclassification_rates = train_perceptron(FV_arg, train[:5], T_max = 10, LR = 10.0, mode='Argument')   
     plt.plot(misclassification_rates)
 
-    (y_hat, y) = test_perceptron(FV_arg, Lambda, valid[:5], mode='Argument')
+    (y_hat, y) = test_perceptron(FV_arg, Lambda, valid[:2], mode='Argument')
     errors = [1 for y1,y2 in zip(y_hat, y) if y1!=y2]
     validation_error = len(errors)/float(len(y))
     print (validation_error)
 
 
 
-if 1:
+if 0:
     #trigger prediction 
     FV_trig = feature_vector.FeatureVector('trigger')
     Lambda, misclassification_rates = train_perceptron(FV_trig, train[:5], T_max = 10, LR = 10.0, mode='Trigger')   
@@ -222,7 +220,8 @@ if 1:
     print (validation_error)
     
     
-    
+
+
     
     
     
