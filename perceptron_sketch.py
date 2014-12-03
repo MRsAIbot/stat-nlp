@@ -15,7 +15,7 @@ import warnings
 
 
 #subsample the >None< events, to obtain more balanced data set.
-def subsample(feature_list, trigger_list, subsampling_rate = 0.75):
+def subsample(feature_list, trigger_list, subsampling_rate = 0.85):
     
     None_indices = [i for (i,trigger) in enumerate(trigger_list) if trigger == u'None']
     All_other_indices = [i for (i,trigger) in enumerate(trigger_list) if trigger != u'None']

@@ -7,14 +7,88 @@ Created on Wed Dec 03 16:40:50 2014
 
 import utils
 import feature_vector
+import perceptron_sketch as perceptron
+
 import warnings
 import json
 import time
 import numpy as np
-import perceptron_sketch as perceptron
+import matplotlib.pyplot as plt
 
 
-       
+
+
+#first subsample a set of event candidates with lower rate of 'None' triggers
+#then also subsample the argument candidates.
+def subsample_jointly(feature_tuples, gold_tuples, rate_trig, rate_arg):
+    
+    None_trig_indices = [i for (i,trigger) in enumerate(gold_tuples) if trigger[0] == u'None']
+
+    All_other_trig_indices = range(len(gold_tuples))
+    for n_i in None_trig_indices:
+        All_other_trig_indices.remove(n_i)
+
+    
+    N = len(None_trig_indices)
+    N_pick = np.floor((1.0 - rate_trig) * N)
+
+    random_indices_trig = np.int16(np.floor(np.random.uniform(0, N , N_pick) ) )
+    subsample_trig_indices = [None_trig_indices[i] for i in random_indices_trig \
+                              if len(gold_tuples[i][1]) > 0]
+
+    # Identify indices of remaining samples after subsampling + randomise them.
+    remaining_entries = subsample_trig_indices + All_other_trig_indices
+    perm = np.random.permutation(len(remaining_entries))
+    remaining_entries = [remaining_entries[p] for p in perm]
+
+    subsampled_feature_tuples = [feature_tuples[i] for i in remaining_entries ]
+    subsampled_gold_tuples = [gold_tuples[i] for i in remaining_entries ]
+
+
+    #Now subsample the argument candidates within each remaining event candidate
+    final_f_tuples = []
+    final_g_tuples = []
+    
+    for (f_tuple, g_tuple) in zip(subsampled_feature_tuples,subsampled_gold_tuples):
+        m = len(g_tuple[1])
+        None_arg_indices = []
+        All_other_indices = range(m)
+        for j in range(m):
+            if g_tuple[1][j] == u'None':
+                All_other_indices.remove(j)
+                None_arg_indices += [j]
+        
+                
+        N = len(None_arg_indices)
+        N_pick = np.floor((1.0 - rate_arg) * N)
+        if N != 0:
+            N_pick = max(N_pick, 1)
+        
+        random_indices_arg = np.floor(np.random.uniform(0, N , N_pick) )    
+        subsample_arg_indices = [None_arg_indices[int(i)] for i in random_indices_arg]
+    
+        # Identify indices of remaining arguments after subsampling and pick.
+        remaining_entries = subsample_arg_indices + All_other_indices
+
+        f_arg_subsampled = [f_tuple[1][i] for i in remaining_entries ]
+        g_arg_subsampled = [g_tuple[1][i] for i in remaining_entries ]
+    
+        final_f_tuples += [(f_tuple[0], f_arg_subsampled) ]
+        final_g_tuples += [(g_tuple[0], g_arg_subsampled) ]
+
+    return final_f_tuples, final_g_tuples
+
+
+
+
+
+
+
+
+
+
+
+
 #predict function for perceptron
 def predict_under_constraint(feature_matrix, Lambda, allowed_classes, 
                              return_scores = False):
@@ -140,7 +214,7 @@ def predict_joint(X_trigger, Lambda_trigger, X_arguments, Lambda_argument, mode)
     e: event trigger [10 possible event triggers]
     a: vector of argument labels. Each element is from [None, Theme, Cause]
     """
-    if mode == 'unconstrained':
+    if mode == 'Joint_unconstrained':
         #predictions can be computed individually, since joint prob factorises 
         e_hat = perceptron.predict(X_trigger, Lambda_trigger)
         a_hat = []
@@ -148,7 +222,7 @@ def predict_joint(X_trigger, Lambda_trigger, X_arguments, Lambda_argument, mode)
             a_hat += [perceptron.predict(X_arguments[arg], Lambda_argument)]
         return e_hat, a_hat
             
-    elif mode == 'constrained':
+    elif mode == 'Joint_constrained':
         e_hat, a_hat = argmax_joint_unconstrained(X_trigger, Lambda_trigger, 
                                                   X_arguments, Lambda_argument, FV)
                                                   
@@ -184,19 +258,15 @@ def build_joint_data_batch(file_name, FV):
     
             gold_list += [(gold_trigger, gold_arguments)]
             feature_matrix_list += [(trigger_matrix, argument_matrices)]
-            
-    return feature_matrix_list, gold_list
+    
+    return subsample_jointly(feature_matrix_list, gold_list, rate_trig=.9, rate_arg=.9)
     
     
-    
-            
 
 
 
 
-
-
-def train_perceptron_joint(FV, training_files, T_max = 1, LR = 1.0, mode = 'unconstrained'):
+def train_perceptron_joint(FV, training_files, T_max = 1, LR = 1.0, mode = 'Joint_unconstrained'):
     if mode == 'Joint_unconstrained' or mode == 'Joint_constrained':
         pass
     else: 
@@ -292,5 +362,6 @@ if 1:
     FV = FV_joint
     train,valid = utils.create_training_and_validation_file_lists(ratio = 0.75, load=True)    
 
-    L_t, L_a, misc = train_perceptron_joint(FV, train[0:1], T_max = 1, 
-                                            LR = 1.0, mode = 'unconstrained')
+    L_t, L_a, misc_rates = train_perceptron_joint(FV, train[:100], T_max = 10, 
+                                            LR = 1.0, mode = 'Joint_unconstrained')
+    plt.plot(misc_rates)

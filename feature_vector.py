@@ -1,5 +1,4 @@
 import numpy as np
-import matplotlib.pyplot as plt
 import string
 from scipy.sparse import coo_matrix
 import utils
