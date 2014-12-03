@@ -116,7 +116,7 @@ def test_perceptron(FV, Lambda, file_list, mode):
         
         
 #predict function for perceptron
-def predict(feature_matrix, Lambda):
+def predict(feature_matrix, Lambda, return_scores = False):
     #feature matrix: rows - classes; columns - feature dimensions
     scores = []
     for c in range(feature_matrix.shape[0]):
@@ -124,7 +124,10 @@ def predict(feature_matrix, Lambda):
         
     highest_score = max(scores)
     predicted_class = scores.index(highest_score)
-    return predicted_class
+    if return_scores:
+        return scores
+    else:
+        return predicted_class
 
 
 def train_perceptron(FV, training_files, T_max = 1, LR = 1.0, mode = 'Trigger'):

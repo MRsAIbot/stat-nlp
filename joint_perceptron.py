@@ -11,27 +11,151 @@ import warnings
 import json
 import time
 import numpy as np
+import perceptron_sketch as perceptron
 
 
-def argmax_joint_unconstrained():
-    pass
+       
+#predict function for perceptron
+def predict_under_constraint(feature_matrix, Lambda, allowed_classes, 
+                             return_scores = False):
+    scores = []
+    for c in allowed_classes:
+        scores.append( np.exp( feature_matrix.getrow(c).dot(Lambda[c,:])[0] ) )
+        
+    highest_score = max(scores)
+    predicted_class = scores.index(highest_score)
+    if not return_scores:
+        return predicted_class
+    else:
+        return predicted_class, scores
+
+
+# which argument is cheapest to switch to 'Theme' [we need at least one!]?
+def enforce_one_Theme(v, scores, Theme_argument):
+    Theme_responses = [s[Theme_argument] for s in scores]
+    if not u'Theme' in Theme_responses:
+        Delta = []
+        for j in range(len(v)):
+            #check score difference between 'Theme' and unconstr. prediction
+            Delta_j = scores[j][Theme_argument] - scores[j][v[j]]
+            Delta += [Delta_j]
+            
+        convert = Delta.index(min(Delta))
+        v[convert] = Theme_argument
+    return v    #return old v if one argument was'Theme' already: no change.
+
+
+#returns score of one particular combination of event and argument labels   
+def total_score_joint(X_trigger, Lambda_trigger, X_arguments, Lambda_argument,
+                event, arguments):
+    
+    ev_scores = perceptron.predict(X_trigger, Lambda_trigger,return_scores = True)
+    s_e = ev_scores[event]
+    
+    #sum scores over all arguments
+    s_a = 0.0
+    for j in range(arguments):
+        argument_scores = perceptron.predict(X_arguments, Lambda_argument, 
+                                             return_scores = True)
+        s_a += argument_scores[arguments[j]]
+
+    return s_e + s_a
 
 
 
+def argmax_joint_unconstrained(X_trig, Lambda_trig, X_arg, Lambda_arg, FV):
+    
+    None_trigger = FV.trigger_list.index(u'None')
+    None_argument = FV.arguments_list.index(u'None')
+    Cause_argument = FV.arguments_list.index(u'Cause')
+    Theme_argument = FV.arguments_list.index(u'Theme')
+    
+    #COMPUTE s1: None trigger and None arguments always
+    e_1 = None_trigger
+    a_1 = [None_argument]*len(X_arg)
+    s1 = total_score_joint(X_trig, Lambda_trig, X_arg, Lambda_arg, e_1, a_1)
+                     
+                     
 
+    #COMPUTE s2: Regulation triggers allowed
+    legal_classes = range(10)
+    legal_classes.remove(None_trigger)
+    e_2 = predict_under_constraint(X_trig, Lambda_trig, legal_classes)
+
+    a_2 = []
+    scores = []
+    for j in range(len(Lambda_arg)):
+        a_j, sco = predict_under_constraint(X_arg[j], Lambda_arg, range(3), 
+                                                return_scores = True) 
+        a_2  += [ a_j ]
+        scores  += [ sco ]
+        
+    #check if Theme appears at least once. If not: adjust to second best score
+    a_2 = enforce_one_Theme(a_2, scores, Theme_argument)   
+    s2 = total_score_joint(X_trig, Lambda_trig, X_arg, Lambda_arg, e_2, a_2 )
 
     
     
+    #COMPUTE s3: no regulation triggers or regulation events allowed
+    legal_triggers = range(10)
+    legal_triggers.remove(None_trigger)
+    #identify the trigger indices for regulation events
+    Regulation_triggers = [i for i in range(len(FV.trigger_list)) \
+                           if 'egulation' in FV.trigger_list[i]]
+     
+    for r in Regulation_triggers:
+        legal_triggers.remove(r)
+    e_3 = predict_under_constraint(X_trig, Lambda_trig, legal_triggers)
     
-def argmax_joint_constrained():
-    pass
+    #argument & scores: Cause arguments not allowed
+    legal_arglabels = range(3)
+    legal_arglabels.remove(Cause_argument)
+    
+    a_3 = []
+    scores = []
+    for j in range(len(Lambda_arg)):
+        a_j, sco = predict_under_constraint(X_arg[j], Lambda_arg, legal_arglabels, 
+                                            return_scores = True) 
+        a_3  += [ a_j ]
+        scores  += [ sco ]
+        
+    a_3 = enforce_one_Theme(a_3, scores, Theme_argument)    
+    s3 = total_score_joint(X_trig, Lambda_trig, X_arg, Lambda_arg, e_3, a_3 )
+    
+    
+    #identify highest scoring case; return its parameters
+    best_score = [s1,s2,s3].index(max([s1,s2,s3]))
+    if best_score == 0:
+        return (e_1, a_1)
+    elif best_score == 1:
+        return (e_2, a_2)
+    else:
+        return (e_3, a_3)
+    
+        
 
 
-
-def predict_joint(X_trigger, Lambda_trigger, X_arguments, Lambda_argument):
-    
-    pass
-    
+def predict_joint(X_trigger, Lambda_trigger, X_arguments, Lambda_argument, mode):
+    """
+    e: event trigger [10 possible event triggers]
+    a: vector of argument labels. Each element is from [None, Theme, Cause]
+    """
+    if mode == 'unconstrained':
+        #predictions can be computed individually, since joint prob factorises 
+        e_hat = perceptron.predict(X_trigger, Lambda_trigger)
+        a_hat = []
+        for arg in range(len(X_arguments))  :
+            a_hat += [perceptron.predict(X_arguments[arg], Lambda_argument)]
+        return e_hat, a_hat
+            
+    elif mode == 'constrained':
+        e_hat, a_hat = argmax_joint_unconstrained(X_trigger, Lambda_trigger, 
+                                                  X_arguments, Lambda_argument, FV)
+                                                  
+    else:
+        warnings.warn(' ### Problem in predict_joint: mode must be either ' \
+                        + '"constrained" or "unconstrained". ###')
+        
     
     
              
@@ -121,7 +245,7 @@ def train_perceptron_joint(FV, training_files, T_max = 1, LR = 1.0, mode = 'unco
             y_arguments = [ [u'None', u'Theme', u'Cause'].index(ga) for ga in gold_arguments]
             
             y_hat_e, y_hat_a = predict_joint(X_trigger, Lambda_trigger, 
-                                             X_arguments, Lambda_argument)
+                                             X_arguments, Lambda_argument, mode)
                                              
             if not sample % 50:
                 print 'it',iteration, sample, 'of', N_samples,'Predict:', y_trigger, 'True:', y_hat_e
@@ -137,10 +261,10 @@ def train_perceptron_joint(FV, training_files, T_max = 1, LR = 1.0, mode = 'unco
                 Lambda_trigger = Lambda_New
                 
                 #adjust argument weights
-                for arg in range(y_arguments):
+                for j in range(len(y_arguments)):
                     Delta_arg = np.zeros([N_classes_argument, N_dims_argument])
-                    Delta_arg[y_hat_a[arg] , :] = -LR * X_arguments.getrow(y_hat_a[arg]).todense() 
-                    Delta_arg[y_arguments[arg] , :] = LR * X_arguments.getrow(y_arguments[arg]).todense() 
+                    Delta_arg[y_hat_a[j] , :] = -LR * X_arguments[j].getrow(y_hat_a[j]).todense() 
+                    Delta_arg[y_arguments[j] , :] = LR * X_arguments[j].getrow(y_arguments[j]).todense() 
     
                     Lambda_New = np.add(Lambda_argument, Delta_arg)
                     Lambda_argument = Lambda_New

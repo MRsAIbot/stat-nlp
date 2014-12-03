@@ -32,6 +32,7 @@ class FeatureVector():
         self.all_grammar_tags = utils.get_grammar_tag_list()
         self.trigger_list = utils.get_trigger_list()
         self.stem_list = utils.create_stem_list()
+        self.arguments_list = [u'None', u'Theme', u'Cause']
 
 
     #Feature matrix for trigger prediction
