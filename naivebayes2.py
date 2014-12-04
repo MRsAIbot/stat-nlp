@@ -70,14 +70,13 @@ class NaiveBayes(object):
 
 		n_labels = labels.size
 		label_to_ind = dict((y, x) for x, y in enumerate(labels))
+		none_ind = label_to_ind.get('None')
+
 		# convert yt, yp into index
 		y_pred = np.array([label_to_ind.get(x, n_labels + 1) for x in y_pred])
 		y_true = np.array([label_to_ind.get(x, n_labels + 1) for x in y_true])
 
 		# intersect y_pred, y_true with labels, eliminate items not in labels
-		print len(y_pred)
-		print len(y_true)
-		print n_labels
 
 		ind = np.logical_and(y_pred < n_labels, y_true < n_labels)
 		y_pred = y_pred[ind]
@@ -86,6 +85,11 @@ class NaiveBayes(object):
 		CM = coo_matrix((np.ones(y_true.shape[0]), (y_true, y_pred)), shape=(n_labels, n_labels)).toarray()
 
 		# Compute Recall
+		
+		CM = np.delete(CM, none_ind, 0)
+		CM = np.delete(CM, none_ind, 1)
+		print CM
+
 		recall_denom = np.sum(CM, axis=1)
 		diag = CM.diagonal()
 		# Macro-average
