@@ -85,18 +85,21 @@ class NaiveBayes(object):
 		CM = coo_matrix((np.ones(y_true.shape[0]), (y_true, y_pred)), shape=(n_labels, n_labels)).toarray()
 
 		# Compute Recall
+
+		mask = np.ones(len(labels), dtype=bool)
+		mask[none_ind] = False
 		
-		CM = np.delete(CM, none_ind, 0)
-		CM = np.delete(CM, none_ind, 1)
+		# CM = np.delete(CM, none_ind, 0)
+		# CM = np.delete(CM, none_ind, 1)
 
 		recall_denom = np.sum(CM, axis=1)
 		diag = CM.diagonal()
 		# Macro-average
-		recall = np.mean(np.divide(diag, recall_denom))
+		recall = np.mean(np.divide(diag, recall_denom)[mask])
 
 		# Compute precision
 		prec_denom = np.sum(CM, axis=0)
-		precision = np.mean(np.divide(diag,prec_denom))
+		precision = np.mean(np.divide(diag,prec_denom)[mask])
 
 		# F1 measure (F-score with beta=1)
 		F1 = 2*precision*recall/(precision+recall)

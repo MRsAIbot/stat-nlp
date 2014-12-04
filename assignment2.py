@@ -133,6 +133,20 @@ def build_dataset(file_list, FV, kind='train', mode='trig', clf='nb', load=True)
 		f.close()
 		return X, y
 
+def crossvalidation(file_list, FV, k=5, mode='trig', clf='nb'):
+	random.shuffle(file_list)
+	chunks = np.array_split(file_list,k)
+	chunks = np.asarray(chunks).tolist()
+	for chunk in chunks:
+		ind = chunks.index(chunk)
+		train_list = chunks[:ind] + chunks[ind+1:]
+		valid_list = chunk
+		X_train, y_train = build_dataset(train_list, FV, kind='train', mode=mode, clf=clf, load=False)
+		X_valid, y_valid = build_dataset(valid_list, FV, kind='valid', mode=mode, clf=clf, load=False)
+
+		NB = nb.NaiveBayes()
+		NB.train(np.asarray(X_train.todense()),np.asarray(y_train))
+	pass
 
 def main():
 
