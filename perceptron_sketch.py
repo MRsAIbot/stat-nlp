@@ -84,10 +84,10 @@ def build_argument_data_batch(file_name, FV):
    
     
 # create predictions for test set
-def test_perceptron(FV, Lambda, file_list, mode):
+def test_perceptron(FV, Lambda, file_list, mode, subsample = False):
     #Test data from all files in file_list
     feature_list = []
-    trigger_list = []
+    gold_list = []
     for i_f, filename in enumerate(file_list):
         print 'Building test data from json file ',i_f , 'of', len(file_list)
         if mode == 'Trigger':
@@ -98,13 +98,24 @@ def test_perceptron(FV, Lambda, file_list, mode):
             warnings.warn('Error in test_perceptron: Must have mode "Trigger" or "Argument"!' )
             
         feature_list += feat_list_one_file
-        trigger_list += gold_list_one_file
+        gold_list += gold_list_one_file
+
+    if subsample:
+        print '###################################'
+        print 'Nones before subsampling', gold_list.count(u'None'), 'of', len(gold_list)
+        feature_list, gold_list = subsample(feature_list, gold_list, subsampling_rate = 0.95)    
+        print 'Nones after subsampling', gold_list.count(u'None'), 'of',len(gold_list)
+
+
+
+
+
 
     predictions = []    
     gold_labels = []
-    for i, (f,y) in enumerate(zip(feature_list, trigger_list) ):
+    for i, (f,y) in enumerate(zip(feature_list, gold_list) ):
         if not i%100:
-            print 'Predicting', i, 'of', len(trigger_list)
+            print 'Predicting', i, 'of', len(gold_list)
         y_hat = predict(f, Lambda)
         predictions += [y_hat]
         if mode == 'Trigger':
@@ -148,7 +159,14 @@ def train_perceptron(FV, training_files, T_max = 1, LR = 1.0, mode = 'Trigger'):
         feature_list += feat_list_one_file
         gold_list += gold_list_one_file
     
-    feature_list, gold_list = subsample(feature_list, gold_list, subsampling_rate = 0.95)    
+    print '###################################'
+    print 'Nones before subsampling', gold_list.count(u'None'), 'of', len(gold_list)
+    if mode == 'Trigger':
+        feature_list, gold_list = subsample(feature_list, gold_list, subsampling_rate = 0.99)    
+    elif mode == 'Argument':
+        feature_list, gold_list = subsample(feature_list, gold_list, subsampling_rate = 0.99)    
+    print 'Nones after subsampling', gold_list.count(u'None'), 'of',len(gold_list)
+
     N_classes, N_dims = feature_list[0].shape
     N_samples = len(feature_list)
 
@@ -204,28 +222,37 @@ if 0:
     Lambda, misclassification_rates = train_perceptron(FV_arg, train[:5], T_max = 10, LR = 10.0, mode='Argument')   
     plt.plot(misclassification_rates)
 
-    (y_hat, y) = test_perceptron(FV_arg, Lambda, valid[:2], mode='Argument')
+    (y_hat, y) = test_perceptron(FV_arg, Lambda, valid[:5], mode='Argument')
     errors = [1 for y1,y2 in zip(y_hat, y) if y1!=y2]
     validation_error = len(errors)/float(len(y))
     print (validation_error)
+    utils.evaluate(y, y_hat, 0)
 
 
 
-if 0:
+if 1:
     #trigger prediction 
     FV_trig = feature_vector.FeatureVector('trigger')
-    Lambda, misclassification_rates = train_perceptron(FV_trig, train[:5], T_max = 10, LR = 10.0, mode='Trigger')   
+    train,valid = utils.create_training_and_validation_file_lists(ratio = 0.75, load=True)    
+
+    Lambda, misclassification_rates = train_perceptron(FV_trig, train[:50], T_max = 20, LR = 1.0, mode='Trigger')   
     plt.plot(misclassification_rates)
 
-    (y_hat, y) = test_perceptron(FV_trig, Lambda, valid[0:5], mode='Trigger')
+    (y_hat, y) = test_perceptron(FV_trig, Lambda, valid[:5], mode='Trigger')
     errors = [1 for y1,y2 in zip(y_hat, y) if y1!=y2]
     validation_error = len(errors)/float(len(y))  
     print (validation_error)
-    
-    
-
+    utils.evaluate(y, y_hat, 0)
 
     
+    
+if 1:
+    plt.figure(2)
+    plt.plot(np.transpose(Lambda))
+    print get_confusion_matrix(y_hat, y)
+    #plt.plot(np.transpose(Lambda)[-100:,:])
+    #plt.xticks(range(len(symbols_list)), symbols_list, size='small')
+    #plt.show()
     
     
     

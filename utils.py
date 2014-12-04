@@ -26,6 +26,47 @@ def load_json_file(file_name):
 		return d
 
 
+def precision(Confusion_matrix, None_label):
+    numerator = np.sum(Confusion_matrix.diagonal()) - Confusion_matrix[None_label,None_label]
+    denominator = np.sum(np.delete(Confusion_matrix, None_label, 1))
+    precision = numerator/float(denominator)
+    return precision
+
+def recall(Confusion_matrix, None_label):
+    numerator = np.sum(Confusion_matrix.diagonal()) - Confusion_matrix[None_label,None_label]
+    denominator = np.sum(np.delete(Confusion_matrix, None_label, 0))
+    recall = numerator/float(denominator) 
+    return recall
+    
+    
+def evaluate(y_gold, y_pred, None_label):
+    Confusion_matrix = get_confusion_matrix(y_gold, y_pred)
+    p = precision(Confusion_matrix, None_label)
+    r = recall(Confusion_matrix, None_label)
+    F1 = 2 * p*r / (p+r)
+    print "Precision:", p
+    print "Recall:", r
+    print "F1-score:", F1
+    return p,r,F1
+    
+
+def get_confusion_matrix(y_gold, y_pred):
+    """ rows: gold labels; columns: predicted labels"""
+    classes = list(set(y_gold))
+    C = len(classes)
+    Confusion = np.zeros([C, C], dtype = np.int64)
+    
+    for gold in range(C):
+        for pred in range(C):
+            gold_indices = set(np.where(np.asarray(y_gold) == gold)[0]) 
+            pred_indices = set(np.where(np.asarray(y_pred) == pred)[0])
+            
+            s = gold_indices.intersection(pred_indices)
+            Confusion[gold, pred] = len(s)
+    print Confusion
+    return Confusion
+
+
 # Returns a dictionary with a count of all triggers
 def get_all_triggers(file_list):
 	trigger_dict = defaultdict(int)
@@ -38,6 +79,7 @@ def get_all_triggers(file_list):
 
 	return trigger_dict
  
+
 def get_trigger_list(load = True):
     if load:
         with open('trigger_list.data', 'rb') as f:
@@ -111,6 +153,54 @@ def get_grammar_tag_list(load = True):
     return gt_list
     
     
+
+def identify_typical_argument_word_stems():
+    file_list = list_files()
+    stem_dict = defaultdict(int)
+    arguments = list(get_all_arguments(file_list) )
+    for arg in arguments:
+        stem_dict[arg] = defaultdict(int)
+        
+    for i_f,f in enumerate(file_list):
+        print 'Stem_list_arg:', i_f ,"of" ,len(file_list)
+        f_json = load_json_file(f)
+        for sentence in f_json['sentences']:
+            eventCandidates = sentence['eventCandidates']
+            for ec in eventCandidates:
+                arguments_list = ec['arguments']
+                for argument in arguments_list:
+                    index = argument['begin'] 
+                    stem = sentence['tokens'][index]['stem']
+                    stem_dict[argument['gold']][stem] +=1
+    return stem_dict    
+    
+
+
+def create_stem_list_arguments(cutoff = 5, load = True):
+    if load == True:
+        print ('Loading stem-list from file.')
+        with open('stem_list_arguments.data', 'rb') as f:
+            loaded = cPickle.load(f)
+        stem_list = correct_end_of_lines_in_saved_list(loaded)
+    else:
+        print ('Computing stem-list')
+        sd = identify_typical_argument_word_stems()
+        stem_list = []
+        for key in sd.keys()[1:]:
+            counts = sd[key]
+            for ckey in counts.keys():
+                if counts[ckey] > cutoff:
+                    stem_list += [ckey]
+        
+        #get rid of double elements
+        stem_list = list(set(stem_list))    
+        #save to file.    
+        with open('stem_list_arguments.data', 'wb') as f:
+            cPickle.dump(stem_list, f)
+    return stem_list
+
+
+
     
 def identify_typical_trigger_word_stems():
     file_list = list_files()
@@ -128,6 +218,35 @@ def identify_typical_trigger_word_stems():
                 stem = sentence['tokens'][index]['stem']
                 stem_dict[ec['gold']][stem] +=1
     return stem_dict
+
+
+
+ 
+def create_stem_list_trigger(cutoff = 5, load = True):
+    if load == True:
+        print ('Loading stem-list from file.')
+        with open('stem_list_trigger.data', 'rb') as f:
+            loaded = cPickle.load(f)
+        stem_list = correct_end_of_lines_in_saved_list(loaded)
+    else:
+        print ('Computing stem-list')
+        sd = identify_typical_trigger_word_stems()
+        stem_list = []
+        for key in sd.keys()[1:]:
+            counts = sd[key]
+            for ckey in counts.keys():
+                if counts[ckey] > cutoff:
+                    stem_list += [ckey]
+        
+        #get rid of double elements
+        stem_list = list(set(stem_list))    
+        #save to file.    
+        with open('stem_list_trigger.data', 'wb') as f:
+            cPickle.dump(stem_list, f)
+    return stem_list
+
+
+
 
 
 def create_training_and_validation_file_lists(ratio = 0.75, load = True):
@@ -158,31 +277,7 @@ def create_training_and_validation_file_lists(ratio = 0.75, load = True):
     
     return training_files, validation_files
     
-    
-    
-    
-def create_stem_list(cutoff = 5, load = True):
-    if load == True:
-        print ('Loading stem-list from file.')
-        with open('stem_list.data', 'rb') as f:
-            loaded = cPickle.load(f)
-        stem_list = correct_end_of_lines_in_saved_list(loaded)
-    else:
-        print ('Computing stem-list')
-        sd = identify_typical_trigger_word_stems()
-        stem_list = []
-        for key in sd.keys()[1:]:
-            counts = sd[key]
-            for ckey in counts.keys():
-                if counts[ckey] > cutoff:
-                    stem_list += [ckey]
-        
-        #get rid of double elements
-        stem_list = list(set(stem_list))    
-        #save to file.    
-        with open('stem_list.data', 'wb') as f:
-            cPickle.dump(stem_list, f)
-    return stem_list
+   
     
     
     
@@ -197,6 +292,8 @@ def correct_end_of_lines_in_saved_list(input_list):
     
     
     
+    
+
     
     
     

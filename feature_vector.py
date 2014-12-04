@@ -30,7 +30,8 @@ class FeatureVector():
         self.listOfAllFiles = utils.list_files()
         self.all_grammar_tags = utils.get_grammar_tag_list()
         self.trigger_list = utils.get_trigger_list()
-        self.stem_list = utils.create_stem_list()
+        self.stem_list_triggers = utils.create_stem_list_trigger(cutoff = 5)
+        self.stem_list_arguments = utils.create_stem_list_arguments(cutoff = 5)
         self.arguments_list = [u'None', u'Theme', u'Cause']
 
 
@@ -119,15 +120,16 @@ class FeatureVector():
     # also the gold labels for both triggers and arguments.) Note that the token
     # is not a string, but the index at which this token appears in sentence.
     """TRIGGER FEATURES"""
+    
     def phi_trigger_0(self, token_index, sentence):
-        #This is merely an example for computing features across a comparison list.
+        #character indicator
         token = sentence['tokens'][token_index]['word']
         symbols_list = string.printable
         return_vec = [ np.uint8(character in token)  for character in symbols_list]
-        return return_vec      
+        return return_vec     
     
-    # check for each grammar tag (e.g. NN) if token is this grammatical pos tag.
     def phi_trigger_1(self, token_index, sentence):
+        #grammar (pos)-tag indicator
         observed_grammar_tag = sentence['tokens'][token_index]['pos'] #e.g. 'NN'
         index = self.all_grammar_tags.index(observed_grammar_tag)
         
@@ -138,12 +140,15 @@ class FeatureVector():
     def phi_trigger_2(self, token_index, sentence):
         #evaluate stem of token.
         observed_stem = sentence['tokens'][token_index]['stem'] 
-        unit_vec = np.zeros(len(self.stem_list), dtype = np.uint8)
+        unit_vec = np.zeros(len(self.stem_list_triggers), dtype = np.uint8)
 
-        if observed_stem in self.stem_list:
-            index = self.stem_list.index(observed_stem)
+        if observed_stem in self.stem_list_triggers:
+            index = self.stem_list_triggers.index(observed_stem)
             unit_vec[index] = 1.0
         return list(unit_vec) 
+        
+    #def phi_trigger_3(self, token_index, sentence):
+        
     
     """ARGUMENT FEATURES"""
     def phi_argument_0(self, token_index, arg_index, sentence):
@@ -164,7 +169,7 @@ class FeatureVector():
         return list(unit_vec) 
     
     def phi_argument_2(self, token_index, arg_index, sentence):
-        #evaluate grammar pos tag of token
+        #evaluate grammar pos tag of trigger token
         observed_grammar_tag = sentence['tokens'][token_index]['pos']
         index = self.all_grammar_tags.index(observed_grammar_tag)
         
@@ -173,71 +178,30 @@ class FeatureVector():
         return list(unit_vec)  
     
     def phi_argument_3(self, token_index, arg_index, sentence):
-        #evaluate stem of token.
+        #evaluate stem of trigger token.
         observed_stem = sentence['tokens'][token_index]['stem'] 
-        unit_vec = np.zeros(len(self.stem_list), dtype = np.uint8)
+        unit_vec = np.zeros(len(self.stem_list_triggers), dtype = np.uint8)
 
-        if observed_stem in self.stem_list:
-            index = self.stem_list.index(observed_stem)
+        if observed_stem in self.stem_list_triggers:
+            index = self.stem_list_triggers.index(observed_stem)
             unit_vec[index] = 1.0
         return list(unit_vec) 
     
+    def phi_argument_4(self, token_index, arg_index, sentence):
+        #evaluate stem of argument token.
+        observed_stem = sentence['tokens'][arg_index]['stem'] 
+        unit_vec = np.zeros(len(self.stem_list_arguments), dtype = np.uint8)
 
-
-
-""" OLD feature functions. Not thrown away yet.
-
-
-# alternative function by Johannes (obsolete)
-# takes as input a word + the sentence it occurs in (dict-structure from 
-# json file). 
-def get_vector_alternative(self, token_index, sentence, all_grammar_tags):
-    all_col_indices = []
-    values = []
-    n_samples = 1
-    d=0
-    for phi in self:
-        phi_vector = self[phi](token_index,sentence, all_grammar_tags)
-
-        index = list(np.nonzero(np.array(phi_vector))[0])
-        all_col_indices += [i+d for i in index] # offset d in matrix
-        d += len(phi_vector)
-
-        values += list(np.array(phi_vector)[index])
-
-    sparse_feature_matrix = coo_matrix((np.array(values), (np.zeros(np.shape(all_col_indices)) ,np.array(all_col_indices))), shape=(n_samples,d))
-    
-    return sparse_feature_matrix
-
-
-#New version: Compute feature vec for whole batch of inputs!
-#Return a sparse matrix, rows: samples. cols: feature dimensions.
-def get_feature_batch(self, token_index_list, sentence_list, all_grammar_tags):
-    n_samples = len(token_index_list)
-    d=0
-    all_col_indices = []
-    all_row_indices = []
-    values = []
-    for (s, (sentence, token_index)) in enumerate(zip(sentence_list, token_index_list)):
-        print s
-        for phi in self:
-            phi_vector = self[phi](token_index,sentence, all_grammar_tags)
-
-            index = list(np.nonzero(np.array(phi_vector))[0])
-            all_col_indices += [i+d for i in index]    # offset d in matrix                
-            all_row_indices += [s]*len(index)
-            
-            values += list(np.array(phi_vector)[index])
-            
-            d += len(phi_vector)
-     
-    
-    sparse_feature_matrix = coo_matrix((np.array(values), 
-                                        (np.asarray(all_row_indices),
-                                        np.array(all_col_indices) ) ),
-                                        shape=(n_samples,d))
+        if observed_stem in self.stem_list_arguments:
+            index = self.stem_list_arguments.index(observed_stem)
+            unit_vec[index] = 1.0
+        return list(unit_vec) 
         
-    return sparse_feature_matrix
-"""
-
-
+    
+    def phi_argument_5(self, token_index, arg_index, sentence):
+        #character indicator for argument
+        token = sentence['tokens'][arg_index]['word']
+        symbols_list = string.printable
+        return_vec = [ np.uint8(character in token)  for character in symbols_list]
+        return return_vec     
+    

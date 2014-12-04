@@ -12,12 +12,14 @@ zz=0
 for key in sd.keys()[1:]:
     counts = sd[key]
     for ckey in counts.keys():
-        if counts[ckey] > 5:
+        if counts[ckey] > 1:
             print key, ckey
             stem_list += [ckey]
             zz +=1
 
+print (len(stem_list))
 stem_list = list(set(stem_list))
+print (len(stem_list))
 
 
 
