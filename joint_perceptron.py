@@ -128,8 +128,8 @@ def total_score_joint(X_trigger, Lambda_trigger, X_arguments, Lambda_argument,
     
     #sum scores over all arguments
     s_a = 0.0
-    for j in range(arguments):
-        argument_scores = perceptron.predict(X_arguments, Lambda_argument, 
+    for j in range(len(arguments)):
+        argument_scores = perceptron.predict(X_arguments[j], Lambda_argument, 
                                              return_scores = True)
         s_a += argument_scores[arguments[j]]
 
@@ -151,6 +151,7 @@ def argmax_joint_unconstrained(X_trig, Lambda_trig, X_arg, Lambda_arg, FV):
                      
                      
 
+    """ HERE IS A PROBLEM. CAN STILL PICK 'CAUSE' FOR NON-REGULATION TRIGGERS""" 
     #COMPUTE s2: Regulation triggers allowed
     legal_classes = range(10)
     legal_classes.remove(None_trigger)
@@ -158,7 +159,7 @@ def argmax_joint_unconstrained(X_trig, Lambda_trig, X_arg, Lambda_arg, FV):
 
     a_2 = []
     scores = []
-    for j in range(len(Lambda_arg)):
+    for j in range(len(X_arg)):
         a_j, sco = predict_under_constraint(X_arg[j], Lambda_arg, range(3), 
                                                 return_scores = True) 
         a_2  += [ a_j ]
@@ -187,7 +188,7 @@ def argmax_joint_unconstrained(X_trig, Lambda_trig, X_arg, Lambda_arg, FV):
     
     a_3 = []
     scores = []
-    for j in range(len(Lambda_arg)):
+    for j in range(len(X_arg)):
         a_j, sco = predict_under_constraint(X_arg[j], Lambda_arg, legal_arglabels, 
                                             return_scores = True) 
         a_3  += [ a_j ]
@@ -218,13 +219,14 @@ def predict_joint(X_trigger, Lambda_trigger, X_arguments, Lambda_argument, mode)
         #predictions can be computed individually, since joint prob factorises 
         e_hat = perceptron.predict(X_trigger, Lambda_trigger)
         a_hat = []
-        for arg in range(len(X_arguments))  :
-            a_hat += [perceptron.predict(X_arguments[arg], Lambda_argument)]
+        for j in range(len(X_arguments))  :
+            a_hat += [perceptron.predict(X_arguments[j], Lambda_argument)]
         return e_hat, a_hat
             
     elif mode == 'Joint_constrained':
         e_hat, a_hat = argmax_joint_unconstrained(X_trigger, Lambda_trigger, 
                                                   X_arguments, Lambda_argument, FV)
+        return e_hat, a_hat
                                                   
     else:
         warnings.warn(' ### Problem in predict_joint: mode must be either ' \
@@ -266,7 +268,8 @@ def build_joint_data_batch(file_name, FV):
 
 
 
-def train_perceptron_joint(FV, training_files, T_max = 1, LR = 1.0, mode = 'Joint_unconstrained'):
+def train_perceptron_joint(FV, training_files, T_max = 1, LR = 1.0, 
+                           mode = 'Joint_unconstrained', plot = True):
     if mode == 'Joint_unconstrained' or mode == 'Joint_constrained':
         pass
     else: 
@@ -297,12 +300,14 @@ def train_perceptron_joint(FV, training_files, T_max = 1, LR = 1.0, mode = 'Join
     Lambda_argument = np.random.normal(0.0, 1.0, [N_classes_argument, N_dims_argument])    
     
     iteration = 0
-    misclassification_rates = []
+    misclassification_rates_t = []
+    misclassification_rates_a = []
     
     #start training epochs
     while iteration < T_max:
         iteration+=1
-        misclassified = 0
+        misclassified_t = 0
+        misclassified_a = 0
 
         for sample in range(N_samples):
             X_trigger = feature_list[sample][0]
@@ -312,16 +317,16 @@ def train_perceptron_joint(FV, training_files, T_max = 1, LR = 1.0, mode = 'Join
             gold_arguments = gold_list[sample][1]
             
             y_trigger = FV.trigger_list.index(gold_trigger)
-            y_arguments = [ [u'None', u'Theme', u'Cause'].index(ga) for ga in gold_arguments]
+            y_arguments = [ FV.arguments_list.index(ga) for ga in gold_arguments]
             
-            y_hat_e, y_hat_a = predict_joint(X_trigger, Lambda_trigger, 
+            y_hat_e, y_hat_a = predict_joint(X_trigger, Lambda_trigger, \
                                              X_arguments, Lambda_argument, mode)
                                              
             if not sample % 50:
-                print 'it',iteration, sample, 'of', N_samples,'Predict:', y_trigger, 'True:', y_hat_e
+                print 'it',iteration, sample, 'of', N_samples,'Predict:', y_hat_e, 'True:', y_trigger
                 
-            if y_hat_e != y_trigger or y_hat_a != y_arguments:
-                misclassified +=1
+            if y_hat_e != y_trigger:
+                misclassified_t +=1
                 #adjust trigger weights
                 Delta_trigger = np.zeros([N_classes_trigger, N_dims_trigger])
                 Delta_trigger[y_hat_e, :] = -LR * X_trigger.getrow(y_hat_e).todense() 
@@ -329,7 +334,8 @@ def train_perceptron_joint(FV, training_files, T_max = 1, LR = 1.0, mode = 'Join
 
                 Lambda_New = np.add(Lambda_trigger, Delta_trigger)
                 Lambda_trigger = Lambda_New
-                
+            if y_hat_a != y_arguments:
+                misclassified_a +=1
                 #adjust argument weights
                 for j in range(len(y_arguments)):
                     Delta_arg = np.zeros([N_classes_argument, N_dims_argument])
@@ -339,13 +345,17 @@ def train_perceptron_joint(FV, training_files, T_max = 1, LR = 1.0, mode = 'Join
                     Lambda_New = np.add(Lambda_argument, Delta_arg)
                     Lambda_argument = Lambda_New
             else:
-                pass #prediction correct, no change.
+                pass #prediction correct, no change.predict_joint
                 
-        print misclassified
-        misclassification_rates += [ float(misclassified)/float(N_samples) ]
+        misclassification_rates_t += [ float(misclassified_t)/float(N_samples) ]
+        misclassification_rates_a += [ float(misclassified_a)/float(N_samples) ]
         
     print time.time()-t_start, 'sec for', N_files, 'Files and', T_max, 'epochs.'
-    return Lambda_trigger, Lambda_argument, misclassification_rates
+    if plot:
+        plt.plot(misclassification_rates_t, 'b', label='trigger')
+        plt.plot(misclassification_rates_a, 'g', label='argument')
+        plt.legend()
+    return Lambda_trigger, Lambda_argument, misclassification_rates_t, misclassification_rates_a
  
 
 
@@ -362,6 +372,5 @@ if 1:
     FV = FV_joint
     train,valid = utils.create_training_and_validation_file_lists(ratio = 0.75, load=True)    
 
-    L_t, L_a, misc_rates = train_perceptron_joint(FV, train[:100], T_max = 10, 
-                                            LR = 1.0, mode = 'Joint_unconstrained')
-    plt.plot(misc_rates)
+    L_t, L_a, misc_t_,misc_a = train_perceptron_joint(FV, train[:2], T_max = 30, 
+                                            LR = 10.0, mode = 'Joint_unconstrained')
