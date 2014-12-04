@@ -88,7 +88,6 @@ class NaiveBayes(object):
 		
 		CM = np.delete(CM, none_ind, 0)
 		CM = np.delete(CM, none_ind, 1)
-		print CM
 
 		recall_denom = np.sum(CM, axis=1)
 		diag = CM.diagonal()
