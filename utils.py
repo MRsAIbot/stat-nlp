@@ -12,6 +12,7 @@ import json
 import matplotlib.pyplot as plt
 import numpy as np
 import cPickle
+import warnings
 
 
 # Create a list of .json file names
@@ -39,8 +40,17 @@ def recall(Confusion_matrix, None_label):
     return recall
     
     
-def evaluate(y_gold, y_pred, None_label):
-    Confusion_matrix = get_confusion_matrix(y_gold, y_pred)
+def evaluate(y_gold, y_pred, FV, mode):
+    if mode == 'Trigger':
+        C = len(FV.trigger_list)
+        None_label = FV.trigger_list.index(u'None')
+    elif mode == 'Arguments':
+        C = len(FV.arguments_list)
+        None_label = FV.arguments_list.index(u'None')
+    else:
+        warnings.warn('ERROR in get_confusion_matrix(): must use correct mode.')
+
+    Confusion_matrix = get_confusion_matrix(y_gold, y_pred, C)
     p = precision(Confusion_matrix, None_label)
     r = recall(Confusion_matrix, None_label)
     F1 = 2 * p*r / (p+r)
@@ -50,10 +60,8 @@ def evaluate(y_gold, y_pred, None_label):
     return p,r,F1
     
 
-def get_confusion_matrix(y_gold, y_pred):
+def get_confusion_matrix(y_gold, y_pred, C):
     """ rows: gold labels; columns: predicted labels"""
-    classes = list(set(y_gold))
-    C = len(classes)
     Confusion = np.zeros([C, C], dtype = np.int64)
     
     for gold in range(C):
@@ -186,7 +194,7 @@ def create_stem_list_arguments(cutoff = 5, load = True):
         print ('Computing stem-list')
         sd = identify_typical_argument_word_stems()
         stem_list = []
-        for key in sd.keys()[1:]:
+        for key in sd.keys()[0:]:
             counts = sd[key]
             for ckey in counts.keys():
                 if counts[ckey] > cutoff:
@@ -232,7 +240,7 @@ def create_stem_list_trigger(cutoff = 5, load = True):
         print ('Computing stem-list')
         sd = identify_typical_trigger_word_stems()
         stem_list = []
-        for key in sd.keys()[1:]:
+        for key in sd.keys()[0:]:
             counts = sd[key]
             for ckey in counts.keys():
                 if counts[ckey] > cutoff:

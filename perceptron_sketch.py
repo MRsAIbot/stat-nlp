@@ -15,7 +15,7 @@ import warnings
 
 
 #subsample the >None< events, to obtain more balanced data set.
-def subsample(feature_list, trigger_list, subsampling_rate = 0.85):
+def subsample(feature_list, trigger_list, subsampling_rate = 0.9):
     
     None_indices = [i for (i,trigger) in enumerate(trigger_list) if trigger == u'None']
     All_other_indices = [i for (i,trigger) in enumerate(trigger_list) if trigger != u'None']
@@ -162,9 +162,9 @@ def train_perceptron(FV, training_files, T_max = 1, LR = 1.0, mode = 'Trigger'):
     print '###################################'
     print 'Nones before subsampling', gold_list.count(u'None'), 'of', len(gold_list)
     if mode == 'Trigger':
-        feature_list, gold_list = subsample(feature_list, gold_list, subsampling_rate = 0.99)    
+        feature_list, gold_list = subsample(feature_list, gold_list, subsampling_rate = 0.6)    
     elif mode == 'Argument':
-        feature_list, gold_list = subsample(feature_list, gold_list, subsampling_rate = 0.99)    
+        feature_list, gold_list = subsample(feature_list, gold_list, subsampling_rate = 0.98)    
     print 'Nones after subsampling', gold_list.count(u'None'), 'of',len(gold_list)
 
     N_classes, N_dims = feature_list[0].shape
@@ -213,11 +213,6 @@ def train_perceptron(FV, training_files, T_max = 1, LR = 1.0, mode = 'Trigger'):
 if 0:
     #Argument prediction
     FV_arg = feature_vector.FeatureVector('argument')
-    #listOfFiles = utils.list_files()
-    #f1 = utils.load_json_file(listOfFiles[0])
-    #sentence = f1['sentences'][0]   #pick first sentence
-    #mat = FV_arg.get_feature_matrix_argument_prediction(0, 2, sentence)
-    #ml,gl = build_argument_data_batch('./bionlp2011genia-train-clean\\PMC-1310901-00-TIAB.json', FV_arg)
     train,valid = utils.create_training_and_validation_file_lists(ratio = 0.75, load=True)    
     Lambda, misclassification_rates = train_perceptron(FV_arg, train[:5], T_max = 10, LR = 10.0, mode='Argument')   
     plt.plot(misclassification_rates)
@@ -226,7 +221,7 @@ if 0:
     errors = [1 for y1,y2 in zip(y_hat, y) if y1!=y2]
     validation_error = len(errors)/float(len(y))
     print (validation_error)
-    utils.evaluate(y, y_hat, 0)
+    utils.evaluate(y, y_hat, FV_arg, mode = 'Arguments')
 
 
 
@@ -235,21 +230,20 @@ if 1:
     FV_trig = feature_vector.FeatureVector('trigger')
     train,valid = utils.create_training_and_validation_file_lists(ratio = 0.75, load=True)    
 
-    Lambda, misclassification_rates = train_perceptron(FV_trig, train[:50], T_max = 20, LR = 1.0, mode='Trigger')   
+    Lambda, misclassification_rates = train_perceptron(FV_trig, train[:100], T_max = 30, LR = 1.0, mode='Trigger')   
     plt.plot(misclassification_rates)
 
-    (y_hat, y) = test_perceptron(FV_trig, Lambda, valid[:5], mode='Trigger')
+    (y_hat, y) = test_perceptron(FV_trig, Lambda, valid[:50], mode='Trigger')
     errors = [1 for y1,y2 in zip(y_hat, y) if y1!=y2]
     validation_error = len(errors)/float(len(y))  
     print (validation_error)
-    utils.evaluate(y, y_hat, 0)
+    utils.evaluate(y, y_hat, FV_trig, mode = 'Trigger')
 
     
     
 if 1:
     plt.figure(2)
     plt.plot(np.transpose(Lambda))
-    print get_confusion_matrix(y_hat, y)
     #plt.plot(np.transpose(Lambda)[-100:,:])
     #plt.xticks(range(len(symbols_list)), symbols_list, size='small')
     #plt.show()

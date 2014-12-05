@@ -30,8 +30,8 @@ class FeatureVector():
         self.listOfAllFiles = utils.list_files()
         self.all_grammar_tags = utils.get_grammar_tag_list()
         self.trigger_list = utils.get_trigger_list()
-        self.stem_list_triggers = utils.create_stem_list_trigger(cutoff = 5)
-        self.stem_list_arguments = utils.create_stem_list_arguments(cutoff = 5)
+        self.stem_list_triggers = utils.create_stem_list_trigger(cutoff = 5, load = True)
+        self.stem_list_arguments = utils.create_stem_list_arguments(cutoff = 5, load = True)
         self.arguments_list = [u'None', u'Theme', u'Cause']
 
 
