@@ -210,7 +210,7 @@ def train_perceptron(FV, training_files, T_max = 1, LR = 1.0, mode = 'Trigger'):
  
 
 
-if 0:
+if 1:
     #Argument prediction
     FV_arg = feature_vector.FeatureVector('argument')
     #listOfFiles = utils.list_files()
@@ -230,12 +230,12 @@ if 0:
 
 
 
-if 1:
+if 0:
     #trigger prediction 
     FV_trig = feature_vector.FeatureVector('trigger')
     train,valid = utils.create_training_and_validation_file_lists(ratio = 0.75, load=True)    
 
-    Lambda, misclassification_rates = train_perceptron(FV_trig, train[:50], T_max = 20, LR = 1.0, mode='Trigger')   
+    Lambda, misclassification_rates = train_perceptron(FV_trig, train[:5], T_max = 20, LR = 1.0, mode='Trigger')   
     plt.plot(misclassification_rates)
 
     (y_hat, y) = test_perceptron(FV_trig, Lambda, valid[:5], mode='Trigger')
