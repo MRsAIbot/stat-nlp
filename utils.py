@@ -229,9 +229,9 @@ def identify_all_dep_labels(return_as_list = True, load = True):
     else:
         dep_dict = defaultdict(int)
         file_list = list_files()
-    
+
         for i_f, f in enumerate(file_list):
-            print i_f, 'of', len(file_list), 'identifying all deps' 
+            print i_f, 'of', len(file_list), 'identifying all deps'
             f_json = load_json_file(f)
             for sentence in f_json['sentences']:
                 for dep in sentence['deps']:
@@ -240,12 +240,11 @@ def identify_all_dep_labels(return_as_list = True, load = True):
         #save data
         with open('dep_list_total.data', 'wb') as f:
             cPickle.dump(key_list, f)
-                
+
     if return_as_list:
         return key_list
     else:
         return dep_dict
-
 
 def identify_typical_trigger_argument_deps():
     file_list = list_files()
@@ -269,21 +268,50 @@ def identify_typical_trigger_argument_deps():
                             dep_dict[ec['gold']][mod] +=1
     return dep_dict
 
+def identify_typical_trigger_word_mods()(return_as_list = True, load = True):
+    if load:
+        with open('dep_list_total.data', 'rb') as f:
+            loaded = cPickle.load(f)
+        key_list = correct_end_of_lines_in_saved_list(loaded)
+        return key_list
+    else:
+        mod_dict = defaultdict(int)
+        file_list = list_files()
+
+        for i_f, f in enumerate(file_list):
+            print i_f, 'of', len(file_list), 'identifying all mods'
+            f_json = load_json_file(f)
+            for sentence in f_json['sentences']:
+                eventCandidates = sentence['eventCandidates']
+                for ec in eventCandidates:
+                    for dep in sentence['deps']:
+                        if dep['head'] in range(ec['begin'],ec['end']+1):
+                            mod = sentence['tokens'][dep['mod']]
+                            dep_dict[mod] +=1
+        key_list = mod_dict.keys()
+        #save data
+        with open('mod_list_total.data', 'wb') as f:
+            cPickle.dump(key_list, f)
+
+    if return_as_list:
+        return key_list
+    else:
+        return mod_dict
 
 def create_dep_list_trig2arg(cutoff = 2, load = False):
     if load:
         with open('trig2arg_deps.data', 'rb') as f:
-            loaded = cPickle.load(f) 
+            loaded = cPickle.load(f)
         trig2arg_deps = correct_end_of_lines_in_saved_list(loaded)
         return trig2arg_deps
-    else:  
+    else:
         trig2arg_deps = []
         dep_dict = identify_typical_trigger_argument_deps()
         for trigger in dep_dict.keys():
             for dep in dep_dict[trigger].keys():
                 if dep_dict[trigger][dep] > cutoff:
                     trig2arg_deps += [dep]
-                    
+
         #remove double entries + save
         trig2arg_deps = list(set(trig2arg_deps))
         with open('trig2arg_deps.data', 'wb') as f:
@@ -315,7 +343,6 @@ def create_stem_list_trigger(cutoff = 5, load = True):
             cPickle.dump(stem_list, f)
     return stem_list
 
-"""
 def create_mod_list_trigger(cutoff = 5, load = True):
     if load == True:
         print ('Loading mod-list from file.')
@@ -338,7 +365,6 @@ def create_mod_list_trigger(cutoff = 5, load = True):
         with open('stem_mod_trigger.data', 'wb') as f:
             cPickle.dump(mod_list, f)
     return mod_list
-"""
 
 def create_training_and_validation_file_lists(ratio = 0.75, load = True):
     #ratio determines the ratio between training and validation set size
