@@ -157,9 +157,7 @@ def create_training_and_validation_file_lists(file_list, ratio = 0.75, load = Tr
 
     
     return training_files, validation_files
-    
-    
-    
+        
     
 def create_stem_list(cutoff = 5, load = True):
     if load == True:

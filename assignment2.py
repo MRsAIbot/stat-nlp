@@ -66,7 +66,7 @@ def build_argument_data_batch(file_name, FV, clf):
 		return vstack(matrix_list), gold_list
 
 
-def build_dataset(file_list, FV, kind='train', mode='trig', clf='nb', load=True):
+def build_dataset(file_list, FV, ind, kind='train', mode='trig', clf='nb', load=True):
 	"""
 	This function construct the data matrix X and target vector y.
 
@@ -80,7 +80,7 @@ def build_dataset(file_list, FV, kind='train', mode='trig', clf='nb', load=True)
 	"""
 	if load:
 		print 'Loading X matrix and y from file.'
-		file_name_pickle = "Xy_{0}_{1}_{2}.data".format(kind,mode,clf)
+		file_name_pickle = "Xy_{0}_{1}_{2}_{3}.data".format(kind,mode,clf,ind)
 		f = open(file_name_pickle,"rb")
 		X, y = cPickle.load(f)
 		f.close()
@@ -127,26 +127,68 @@ def build_dataset(file_list, FV, kind='train', mode='trig', clf='nb', load=True)
 		else:
 			warnings.warn('Error in build_dataset: Must have clf "nb" or "perc"!')
 
-		file_name_pickle = "Xy_{0}_{1}_{2}.data".format(kind,mode,clf)
+		file_name_pickle = "Xy_{0}_{1}_{2}_{3}.data".format(kind,mode,clf,ind)
 		f = open(file_name_pickle,"w")
 		cPickle.dump((X,y),f)
 		f.close()
 		return X, y
 
-def crossvalidation(file_list, FV, k=5, mode='trig', clf='nb'):
+def crossvalidation(file_list, k=5, mode='trig', clf='nb'):
+	if mode=='trig':
+		FV = feature_vector.FeatureVector('trigger')
+	elif mode=='arg':
+		FV = feature_vector.FeatureVector('argument')
+
 	random.shuffle(file_list)
 	chunks = np.array_split(file_list,k)
 	chunks = np.asarray(chunks).tolist()
+
 	for chunk in chunks:
 		ind = chunks.index(chunk)
 		train_list = chunks[:ind] + chunks[ind+1:]
 		valid_list = chunk
-		X_train, y_train = build_dataset(train_list, FV, kind='train', mode=mode, clf=clf, load=False)
-		X_valid, y_valid = build_dataset(valid_list, FV, kind='valid', mode=mode, clf=clf, load=False)
+		X_train, y_train = build_dataset(train_list, FV, ind=ind, kind='train', mode=mode, clf=clf, load=False)
+		X_valid, y_valid = build_dataset(valid_list, FV, ind=ind, kind='valid', mode=mode, clf=clf, load=False)
 
-		NB = nb.NaiveBayes()
-		NB.train(np.asarray(X_train.todense()),np.asarray(y_train))
+		if clf=='nb':
+			NB = nb.NaiveBayes()
+			NB.train(np.asarray(X_train.todense()),np.asarray(y_train))
+		elif clf=='perc':
+			pass
 	pass
+
+
+
+#subsample the >None< events, to obtain more balanced data set.
+def subsample(feature_list, trigger_list, clf, subsampling_rate = 0.75):
+    
+    None_indices = [i for (i,trigger) in enumerate(trigger_list) if trigger == u'None']
+    All_other_indices = [i for (i,trigger) in enumerate(trigger_list) if trigger != u'None']
+    
+    
+    N = len(None_indices)
+    N_pick = np.floor((1.0 - subsampling_rate) * N)
+    #N_pick = len(All_other_indices)
+    
+    #now pick N_pick random 'None' samples among all of them.
+    random_indices = np.floor(np.random.uniform(0, N , N_pick) )    
+    subsample_of_None_indices = [None_indices[int(i)] for i in random_indices]
+    
+    # Identify indices of remaining samples after subsampling + randomise them.
+    remaining_entries = subsample_of_None_indices + All_other_indices
+    perm = np.random.permutation(len(remaining_entries))
+    remaining_entries = [remaining_entries[p] for p in perm]
+    
+    # Return the subsampled list of samples.
+    if clf=='perc':
+    	subsampled_feature_list = [feature_list[i] for i in remaining_entries ]
+    	subsampled_trigger_list = [trigger_list[i] for i in remaining_entries ]
+    	return subsampled_feature_list, subsampled_trigger_list
+    elif clf=='nb':
+    	subsampled_feature_list = feature_list[remaining_entries]
+    	subsampled_trigger_list = np.asarray([trigger_list[i] for i in remaining_entries ])
+    
+
 
 def main():
 
@@ -174,8 +216,8 @@ def main():
 	FV_trig = feature_vector.FeatureVector('trigger')
 	train_list, valid_list = utils.create_training_and_validation_file_lists(list_of_files)
 
-	X_train, y_train = build_dataset(train_list, FV_trig, kind='train', mode='trig', clf='nb', load=True)
-	X_valid, y_valid = build_dataset(valid_list, FV_trig, kind='valid', mode='trig', clf='nb', load=True)
+	X_train, y_train = build_dataset(train_list, FV_trig, ind=1, kind='train', mode='trig', clf='nb', load=False)
+	X_valid, y_valid = build_dataset(valid_list, FV_trig, ind=1, kind='valid', mode='trig', clf='nb', load=False)
 
 	NB_trig = nb.NaiveBayes()
 	NB_trig.train(np.asarray(X_train.todense()),np.asarray(y_train))
@@ -199,8 +241,8 @@ def main():
 	print "Experiment 2: Naive Bayes predicting arguments"
 	FV_arg = feature_vector.FeatureVector('argument')
 
-	X_train, y_train = build_dataset(train_list, FV_arg, kind='train', mode='arg', clf='nb', load=True)
-	X_valid, y_valid = build_dataset(valid_list, FV_arg, kind='valid', mode='arg', clf='nb', load=True)
+	X_train, y_train = build_dataset(train_list, FV_arg, ind=1, kind='train', mode='arg', clf='nb', load=False)
+	X_valid, y_valid = build_dataset(valid_list, FV_arg, ind=1, kind='valid', mode='arg', clf='nb', load=False)
 
 	NB_arg = nb.NaiveBayes()
 	NB_arg.train(np.asarray(X_train.todense()), np.asarray(y_train))

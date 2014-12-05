@@ -92,14 +92,22 @@ class NaiveBayes(object):
 		# CM = np.delete(CM, none_ind, 0)
 		# CM = np.delete(CM, none_ind, 1)
 
-		recall_denom = np.sum(CM, axis=1)
 		diag = CM.diagonal()
-		# Macro-average
-		recall = np.mean(np.divide(diag, recall_denom)[mask])
+		diag = np.sum(diag[mask])
+
+		recall_denom = np.sum(CM, axis=1)
+		recall_denom = np.sum(recall_denom[mask])
+
+		recall = diag/recall_denom
 
 		# Compute precision
 		prec_denom = np.sum(CM, axis=0)
-		precision = np.mean(np.divide(diag,prec_denom)[mask])
+		prec_denom = np.sum(prec_denom[mask])
+
+		precision = diag/prec_denom
+
+		# Compute accuracy
+		acc = np.sum(CM.diagonal())/np.sum(CM, axis=None)
 
 		# F1 measure (F-score with beta=1)
 		F1 = 2*precision*recall/(precision+recall)
