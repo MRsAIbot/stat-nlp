@@ -161,32 +161,36 @@ def crossvalidation(file_list, k=5, mode='trig', clf='nb'):
 
 #subsample the >None< events, to obtain more balanced data set.
 def subsample(feature_list, trigger_list, clf, subsampling_rate = 0.75):
-    
-    None_indices = [i for (i,trigger) in enumerate(trigger_list) if trigger == u'None']
-    All_other_indices = [i for (i,trigger) in enumerate(trigger_list) if trigger != u'None']
-    
-    
-    N = len(None_indices)
-    N_pick = np.floor((1.0 - subsampling_rate) * N)
-    #N_pick = len(All_other_indices)
-    
-    #now pick N_pick random 'None' samples among all of them.
-    random_indices = np.floor(np.random.uniform(0, N , N_pick) )    
-    subsample_of_None_indices = [None_indices[int(i)] for i in random_indices]
-    
-    # Identify indices of remaining samples after subsampling + randomise them.
-    remaining_entries = subsample_of_None_indices + All_other_indices
-    perm = np.random.permutation(len(remaining_entries))
-    remaining_entries = [remaining_entries[p] for p in perm]
-    
-    # Return the subsampled list of samples.
-    if clf=='perc':
-    	subsampled_feature_list = [feature_list[i] for i in remaining_entries ]
-    	subsampled_trigger_list = [trigger_list[i] for i in remaining_entries ]
-    	return subsampled_feature_list, subsampled_trigger_list
-    elif clf=='nb':
-    	subsampled_feature_list = feature_list[remaining_entries]
-    	subsampled_trigger_list = np.asarray([trigger_list[i] for i in remaining_entries ])
+	"""
+	clf: string -> 'perc' or 'nb'
+	"""
+
+	None_indices = [i for (i,trigger) in enumerate(trigger_list) if trigger == u'None']
+	All_other_indices = [i for (i,trigger) in enumerate(trigger_list) if trigger != u'None']
+
+
+	N = len(None_indices)
+	N_pick = np.floor((1.0 - subsampling_rate) * N)
+	#N_pick = len(All_other_indices)
+
+	#now pick N_pick random 'None' samples among all of them.
+	random_indices = np.floor(np.random.uniform(0, N , N_pick) )    
+	subsample_of_None_indices = [None_indices[int(i)] for i in random_indices]
+
+	# Identify indices of remaining samples after subsampling + randomise them.
+	remaining_entries = subsample_of_None_indices + All_other_indices
+	perm = np.random.permutation(len(remaining_entries))
+	remaining_entries = [remaining_entries[p] for p in perm]
+
+	# Return the subsampled list of samples.
+	if clf=='perc':
+		subsampled_feature_list = [feature_list[i] for i in remaining_entries ]
+		subsampled_trigger_list = [trigger_list[i] for i in remaining_entries ]
+		return subsampled_feature_list, subsampled_trigger_list
+	elif clf=='nb':
+		subsampled_feature_list = feature_list.tocsr()[remaining_entries].tocoo()
+		subsampled_trigger_list = np.asarray([trigger_list[i] for i in remaining_entries ])
+		return subsampled_feature_list, subsampled_trigger_list
     
 
 
@@ -216,8 +220,10 @@ def main():
 	FV_trig = feature_vector.FeatureVector('trigger')
 	train_list, valid_list = utils.create_training_and_validation_file_lists(list_of_files)
 
-	X_train, y_train = build_dataset(train_list, FV_trig, ind=1, kind='train', mode='trig', clf='nb', load=False)
-	X_valid, y_valid = build_dataset(valid_list, FV_trig, ind=1, kind='valid', mode='trig', clf='nb', load=False)
+	X_train, y_train = build_dataset(train_list, FV_trig, ind=1, kind='train', mode='trig', clf='nb', load=True)
+	X_train, y_train = subsample(X_train, y_train, clf='nb', subsampling_rate=0.75)
+	X_valid, y_valid = build_dataset(valid_list, FV_trig, ind=1, kind='valid', mode='trig', clf='nb', load=True)
+	X_valid, y_valid = subsample(X_valid, y_valid, clf='nb', subsampling_rate=0.75)
 
 	NB_trig = nb.NaiveBayes()
 	NB_trig.train(np.asarray(X_train.todense()),np.asarray(y_train))
@@ -241,8 +247,10 @@ def main():
 	print "Experiment 2: Naive Bayes predicting arguments"
 	FV_arg = feature_vector.FeatureVector('argument')
 
-	X_train, y_train = build_dataset(train_list, FV_arg, ind=1, kind='train', mode='arg', clf='nb', load=False)
-	X_valid, y_valid = build_dataset(valid_list, FV_arg, ind=1, kind='valid', mode='arg', clf='nb', load=False)
+	X_train, y_train = build_dataset(train_list, FV_arg, ind=1, kind='train', mode='arg', clf='nb', load=True)
+	X_train, y_train = subsample(X_train, y_train, clf='nb', subsampling_rate=0.75)
+	X_valid, y_valid = build_dataset(valid_list, FV_arg, ind=1, kind='valid', mode='arg', clf='nb', load=True)
+	X_valid, y_valid = subsample(X_valid, y_valid, clf='nb', subsampling_rate=0.75)
 
 	NB_arg = nb.NaiveBayes()
 	NB_arg.train(np.asarray(X_train.todense()), np.asarray(y_train))
