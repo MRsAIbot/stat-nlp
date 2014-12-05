@@ -200,6 +200,8 @@ def main():
 
 	# Just testing my functions a bit
 	list_of_files = utils.list_files()
+
+	x = utils.load_json_file(list_of_files[0])
 	    
 	# Finding and counting all event triggers
 	t = utils.get_all_triggers(list_of_files)
@@ -221,9 +223,8 @@ def main():
 	train_list, valid_list = utils.create_training_and_validation_file_lists(list_of_files)
 
 	X_train, y_train = build_dataset(train_list, FV_trig, ind=1, kind='train', mode='trig', clf='nb', load=True)
-	X_train, y_train = subsample(X_train, y_train, clf='nb', subsampling_rate=0.75)
+	X_train, y_train = subsample(X_train, y_train, clf='nb', subsampling_rate=0.60)
 	X_valid, y_valid = build_dataset(valid_list, FV_trig, ind=1, kind='valid', mode='trig', clf='nb', load=True)
-	X_valid, y_valid = subsample(X_valid, y_valid, clf='nb', subsampling_rate=0.75)
 
 	NB_trig = nb.NaiveBayes()
 	NB_trig.train(np.asarray(X_train.todense()),np.asarray(y_train))
@@ -248,9 +249,8 @@ def main():
 	FV_arg = feature_vector.FeatureVector('argument')
 
 	X_train, y_train = build_dataset(train_list, FV_arg, ind=1, kind='train', mode='arg', clf='nb', load=True)
-	X_train, y_train = subsample(X_train, y_train, clf='nb', subsampling_rate=0.75)
+	X_train, y_train = subsample(X_train, y_train, clf='nb', subsampling_rate=0.90)
 	X_valid, y_valid = build_dataset(valid_list, FV_arg, ind=1, kind='valid', mode='arg', clf='nb', load=True)
-	X_valid, y_valid = subsample(X_valid, y_valid, clf='nb', subsampling_rate=0.75)
 
 	NB_arg = nb.NaiveBayes()
 	NB_arg.train(np.asarray(X_train.todense()), np.asarray(y_train))
