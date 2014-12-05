@@ -230,10 +230,10 @@ if 1:
     FV_trig = feature_vector.FeatureVector('trigger')
     train,valid = utils.create_training_and_validation_file_lists(ratio = 0.75, load=True)    
 
-    Lambda, misclassification_rates = train_perceptron(FV_trig, train[:100], T_max = 30, LR = 1.0, mode='Trigger')   
+    Lambda, misclassification_rates = train_perceptron(FV_trig, train[:10], T_max = 3, LR = 1.0, mode='Trigger')   
     plt.plot(misclassification_rates)
 
-    (y_hat, y) = test_perceptron(FV_trig, Lambda, valid[:50], mode='Trigger')
+    (y_hat, y) = test_perceptron(FV_trig, Lambda, valid[:2], mode='Trigger')
     errors = [1 for y1,y2 in zip(y_hat, y) if y1!=y2]
     validation_error = len(errors)/float(len(y))  
     print (validation_error)

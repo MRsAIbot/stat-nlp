@@ -256,6 +256,52 @@ def create_stem_list_trigger(cutoff = 5, load = True):
 
 
 
+def identify_typical_trigger_word_mods():
+    file_list = list_files()
+    mod_dict = defaultdict(int)
+    triggers = list(get_all_triggers(file_list) )
+    for trigger in triggers:
+        mod_dict[trigger] = defaultdict(int)
+        
+    for f in file_list:
+        f_json = load_json_file(f)
+        for sentence in f_json['sentences']:
+            eventCandidates = sentence['eventCandidates']
+            for ec in eventCandidates:
+                index = ec['begin']
+                for dep in sentence['deps']:
+                    if dep['head'] == index:
+                        mod = dep['mod']
+                        mod_dict[ec['gold']][mod] +=1
+    return mod_dict
+
+
+
+def create_mod_list_trigger(cutoff = 5, load = True):
+    if load == True:
+        print ('Loading mod-list from file.')
+        with open('mod_list_trigger.data', 'rb') as f:
+            loaded = cPickle.load(f)
+            mod_list = correct_end_of_lines_in_saved_list(loaded)
+    else:
+        print ('Computing mod-list')
+    sd = identify_typical_trigger_word_mods()
+    mod_list = []
+    for key in sd.keys()[1:]:
+        counts = sd[key]
+        for ckey in counts.keys():
+            if counts[ckey] > cutoff:
+                mod_list += [ckey]
+                
+    #get rid of double elements
+    mod_list = list(set(mod_list))
+    #save to file.
+    with open('stem_mod_trigger.data', 'wb') as f:
+        cPickle.dump(mod_list, f)
+    return mod_list
+
+
+
 
 def create_training_and_validation_file_lists(ratio = 0.75, load = True):
     #ratio determines the ratio between training and validation set size
