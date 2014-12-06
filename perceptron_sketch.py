@@ -205,7 +205,7 @@ def train_perceptron(FV, training_files, T_max = 1, LR = 1.0, mode = 'Trigger'):
  
 
 
-if 1:
+if 0:
     #Argument prediction
     FV_arg = feature_vector.FeatureVector('argument')
     train,valid = utils.create_training_and_validation_file_lists(ratio = 0.75, load=True)    
@@ -236,7 +236,7 @@ if 0:
 
     
     
-if 1:
+if 0:
     plt.figure(2)
     plt.plot(np.transpose(Lambda))
     #plt.plot(np.transpose(Lambda)[-100:,:])

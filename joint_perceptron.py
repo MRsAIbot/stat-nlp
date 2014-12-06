@@ -14,6 +14,7 @@ import json
 import time
 import numpy as np
 import matplotlib.pyplot as plt
+import cPickle
 
 
 
@@ -235,7 +236,7 @@ def predict_joint(X_trigger, Lambda_trigger, X_arguments, Lambda_argument, mode)
     
              
     
-def build_joint_data_batch(file_name, FV):
+def build_joint_data_batch(file_name, FV, subsample = True):
     gold_list = []
     feature_matrix_list = []   #list of feature matrices for both trigger & argument
     f_json = json.load(open(file_name)) 
@@ -259,10 +260,10 @@ def build_joint_data_batch(file_name, FV):
     
             gold_list += [(gold_trigger, gold_arguments)]
             feature_matrix_list += [(trigger_matrix, argument_matrices)]
-    
-    return subsample_jointly(feature_matrix_list, gold_list, rate_trig=.9, rate_arg=.9)
-    
-    
+    if subsample:
+        return subsample_jointly(feature_matrix_list, gold_list, rate_trig=.9, rate_arg=.9)
+    else: 
+        return (feature_matrix_list, gold_list)
 
 
 # create predictions for test set
@@ -272,7 +273,7 @@ def test_perceptron_joint(FV, Lambda_trig, Lambda_arg, file_list, mode, subsampl
     gold_list = []
     for i_f, file_name in enumerate(file_list):
         print 'Building test data from json file ',i_f , 'of', len(file_list)
-        (feat_list_one_file, gold_list_one_file) = build_joint_data_batch(file_name, FV)
+        (feat_list_one_file, gold_list_one_file) = build_joint_data_batch(file_name, FV, subsample)
         feature_list += feat_list_one_file
         gold_list += gold_list_one_file
 
@@ -302,7 +303,8 @@ def test_perceptron_joint(FV, Lambda_trig, Lambda_arg, file_list, mode, subsampl
                                          X_arguments, Lambda_arg, mode)    
         predictions_e += [y_hat_e]    
         predictions_a += [y_hat_a]
-            
+    
+    print len(predictions_e)            
     return predictions_e, gold_e, predictions_a, gold_a
 
 
@@ -405,18 +407,25 @@ def train_perceptron_joint(FV, training_files, T_max = 1, LR = 1.0,
             
             
             
-if 1:
+if 0:
     #joint prediction
     FV_joint = feature_vector.FeatureVector('joint')
     FV = FV_joint
     train,valid = utils.create_training_and_validation_file_lists(ratio = 0.75, load=True)    
 
-    L_t, L_a, misc_t_,misc_a = train_perceptron_joint(FV, train[20:70], T_max = 10, 
+    L_t, L_a, misc_t_,misc_a = train_perceptron_joint(FV, train[:10], T_max = 50, 
                                             LR = 10.0, mode = 'Joint_unconstrained')
 
-    (p_e,g_e, p_a, g_a) = test_perceptron_joint(FV, L_t, L_a, valid[20:40], 
+    (p_e,g_e, p_a, g_a) = test_perceptron_joint(FV, L_t, L_a, valid[:5], 
                                                 mode = 'Joint_unconstrained', 
                                                 subsample = False)
+    
+    
+    savedata = (L_t, L_a)
+    with open('Joint_perceptron.data', 'wb') as f:
+        cPickle.dump(savedata, f)  
+    with open('Joint_perceptron.data', 'rb') as f:
+        LL_t, LL_a = cPickle.load(f)
     
     #evaluate trigger predictions
     errors_e = [1 for y1,y2 in zip(p_e, g_e) if y1!=y2]
@@ -434,7 +443,7 @@ if 1:
     
 
     
-if 1:
+if 0:
     plt.figure(2)
     plt.subplot(211)
     plt.plot(np.transpose(L_t))
