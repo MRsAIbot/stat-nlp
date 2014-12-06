@@ -164,7 +164,7 @@ def train_perceptron(FV, training_files, T_max = 1, LR = 1.0, mode = 'Trigger'):
     if mode == 'Trigger':
         feature_list, gold_list = subsample(feature_list, gold_list, subsampling_rate = 0.6)    
     elif mode == 'Argument':
-        feature_list, gold_list = subsample(feature_list, gold_list, subsampling_rate = 0.98)    
+        feature_list, gold_list = subsample(feature_list, gold_list, subsampling_rate = 0.95)    
     print 'Nones after subsampling', gold_list.count(u'None'), 'of',len(gold_list)
 
     N_classes, N_dims = feature_list[0].shape
@@ -214,7 +214,7 @@ if 0:
     #Argument prediction
     FV_arg = feature_vector.FeatureVector('argument')
     train,valid = utils.create_training_and_validation_file_lists(ratio = 0.75, load=True)    
-    Lambda, misclassification_rates = train_perceptron(FV_arg, train[:5], T_max = 10, LR = 10.0, mode='Argument')   
+    Lambda, misclassification_rates = train_perceptron(FV_arg, train[:20], T_max = 10, LR = 10.0, mode='Argument')   
     plt.plot(misclassification_rates)
 
     (y_hat, y) = test_perceptron(FV_arg, Lambda, valid[:5], mode='Argument')
@@ -225,15 +225,15 @@ if 0:
 
 
 
-if 1:
+if 0:
     #trigger prediction 
     FV_trig = feature_vector.FeatureVector('trigger')
     train,valid = utils.create_training_and_validation_file_lists(ratio = 0.75, load=True)    
 
-    Lambda, misclassification_rates = train_perceptron(FV_trig, train[:10], T_max = 3, LR = 1.0, mode='Trigger')   
+    Lambda, misclassification_rates = train_perceptron(FV_trig, train[:20], T_max = 3, LR = 1.0, mode='Trigger')   
     plt.plot(misclassification_rates)
 
-    (y_hat, y) = test_perceptron(FV_trig, Lambda, valid[:2], mode='Trigger')
+    (y_hat, y) = test_perceptron(FV_trig, Lambda, valid[:20], mode='Trigger')
     errors = [1 for y1,y2 in zip(y_hat, y) if y1!=y2]
     validation_error = len(errors)/float(len(y))  
     print (validation_error)
@@ -241,7 +241,7 @@ if 1:
 
     
     
-if 1:
+if 0:
     plt.figure(2)
     plt.plot(np.transpose(Lambda))
     #plt.plot(np.transpose(Lambda)[-100:,:])

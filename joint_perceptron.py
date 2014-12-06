@@ -265,6 +265,32 @@ def build_joint_data_batch(file_name, FV):
     
     
 
+"""
+# create predictions for test set
+def test_perceptron_joint(FV, Lambda, file_list, mode, subsample = False):
+    #Test data from all files in file_list
+    feature_list = []
+    gold_list = []
+    for i_f, filename in enumerate(file_list):
+        print 'Building test data from json file ',i_f , 'of', len(file_list)
+        if mode == 'Trigger':
+            (feat_list_one_file, gold_list_one_file) = build_trigger_data_batch(filename, FV)
+        elif mode == 'Argument':
+            (feat_list_one_file, gold_list_one_file) = build_argument_data_batch(filename, FV)
+        else:
+            warnings.warn('Error in test_perceptron: Must have mode "Trigger" or "Argument"!' )
+            
+        feature_list += feat_list_one_file
+        gold_list += gold_list_one_file
+
+    if subsample:
+        print '###################################'
+        print 'Nones before subsampling', gold_list.count(u'None'), 'of', len(gold_list)
+        feature_list, gold_list = subsample(feature_list, gold_list, subsampling_rate = 0.95)    
+        print 'Nones after subsampling', gold_list.count(u'None'), 'of',len(gold_list)
+
+"""
+
 
 
 
@@ -362,7 +388,7 @@ def train_perceptron_joint(FV, training_files, T_max = 1, LR = 1.0,
 
 
 
-            
+#BEFORE RUNNING: make all if 0: in perceptron_sketch because it is imported.
             
             
             
@@ -372,5 +398,5 @@ if 1:
     FV = FV_joint
     train,valid = utils.create_training_and_validation_file_lists(ratio = 0.75, load=True)    
 
-    L_t, L_a, misc_t_,misc_a = train_perceptron_joint(FV, train[:2], T_max = 30, 
+    L_t, L_a, misc_t_,misc_a = train_perceptron_joint(FV, train[:2], T_max = 10, 
                                             LR = 10.0, mode = 'Joint_unconstrained')

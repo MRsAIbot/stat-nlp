@@ -32,11 +32,16 @@ class FeatureVector():
         self.trigger_list = utils.get_trigger_list()
         self.stem_list_triggers = utils.create_stem_list_trigger(cutoff = 5, load = True)
         self.stem_list_arguments = utils.create_stem_list_arguments(cutoff = 5, load = True)
+        self.mod_list_triggers = utils.create_mod_list_trigger(cutoff = 25, load=True)        
         self.arguments_list = [u'None', u'Theme', u'Cause']
 
 
+        self.dep_list_total = utils.identify_all_dep_labels(load = True)
+        self.trig2arg_deps = utils.create_dep_list_trig2arg(cutoff = 2, load = True)
+
+
     #Feature matrix for trigger prediction
-    def get_feature_matrix(self, token_index, sentence):
+    def get_feature_matrix(self, token_index, sentence, clf = 'perc'):
         col_indices = []
         values = []
         n_classes = 10  #length of list of all occurring triggers in dataset.
@@ -147,8 +152,42 @@ class FeatureVector():
             unit_vec[index] = 1.0
         return list(unit_vec) 
         
-    #def phi_trigger_3(self, token_index, sentence):
+    def phi_trigger_3(self, token_index, sentence):
+        #evaluate head of token.
+        dep_vec = np.zeros(len(self.dep_list_total), dtype = np.uint8)
+        #return a vector with 1 for the dep_label for which the token is head.
+        for dep in sentence['deps']:
+            if dep['head'] == token_index:
+                dep_label = dep['label']
+                if dep_label in self.dep_list_total:
+                    index = self.dep_list_total.index(dep_label)
+                    dep_vec[index] = 1.0
+        return list(dep_vec)
         
+    def phi_trigger_4(self, token_index, sentence):
+        #evaluate mod of token.
+        dep_vec = np.zeros(len(self.dep_list_total), dtype = np.uint8)
+        #return a vector with 1 for the dep_label for which the token is mod.
+        for dep in sentence['deps']:
+            if dep['mod'] == token_index:
+                dep_label = dep['label']
+                if dep_label in self.dep_list_total:
+                    index = self.dep_list_total.index(dep_label)
+                    dep_vec[index] = 1.0
+        return list(dep_vec)
+    
+    def phi_trigger_5(self, token_index, sentence):
+        #evaluate head of token.
+        mod_vec = np.zeros(len(self.mod_list_triggers), dtype = np.uint8)
+        #return a vector with 1 for the mods for which the token is head.
+        for dep in sentence['deps']:
+            if dep['head'] == token_index:
+                mod = sentence['tokens'][dep['mod']]
+                if mod in self.mod_list_triggers:
+                    index = self.mod_list_triggers.index(mod)
+                    mod_vec[index] = 1.0
+        return list(mod_vec)
+    
     
     """ARGUMENT FEATURES"""
     def phi_argument_0(self, token_index, arg_index, sentence):
@@ -205,3 +244,38 @@ class FeatureVector():
         return_vec = [ np.uint8(character in token)  for character in symbols_list]
         return return_vec     
     
+    def phi_argument_6(self, token_index, arg_index, sentence):
+        #evaluate head of arg_index.
+        dep_vec = np.zeros(len(self.dep_list_total), dtype = np.uint8)
+        #return a vector with 1 for the dep_label for which the token is head.
+        for dep in sentence['deps']:
+            if dep['head'] == arg_index:
+                dep_label = dep['label']
+                if dep_label in self.dep_list_total:
+                    index = self.dep_list_total.index(dep_label)
+                    dep_vec[index] = 1.0
+        return list(dep_vec)
+        
+    def phi_argument_7(self, token_index, arg_index, sentence):
+        #evaluate mod of arg_index.
+        dep_vec = np.zeros(len(self.dep_list_total), dtype = np.uint8)
+        #return a vector with 1 for the dep_label for which the token is mod.
+        for dep in sentence['deps']:
+            if dep['mod'] == arg_index:
+                dep_label = dep['label']
+                if dep_label in self.dep_list_total:
+                    index = self.dep_list_total.index(dep_label)
+                    dep_vec[index] = 1.0
+        return list(dep_vec)
+        
+    def phi_argument_8(self, token_index, arg_index, sentence):
+        #evaluate if trig--->arg dependency falls into one of the typical trig2arg_dep
+        dep_vec = np.zeros(len(self.trig2arg_deps), dtype = np.uint8)
+        #return a vector with 1 for the dep_label for which trig->arg has this label
+        for dep in sentence['deps']:
+            if dep['mod'] == token_index and dep['head'] == arg_index:
+                dep_label = dep['label']
+                if dep_label in self.trig2arg_deps:
+                    index = self.trig2arg_deps.index(dep_label)
+                    dep_vec[index] = 1.0
+        return list(dep_vec)
