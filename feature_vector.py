@@ -32,7 +32,7 @@ class FeatureVector():
         self.trigger_list = utils.get_trigger_list()
         self.stem_list_triggers = utils.create_stem_list_trigger(cutoff = 5, load=True)
         self.stem_list_arguments = utils.create_stem_list_arguments(cutoff = 5, load=True)
-        self.mod_list_triggers = utils.create_mod_list_trigger(cutoff = 5, load=False)
+        self.mod_list_triggers = utils.create_mod_list_trigger(cutoff = 25, load=False)
         self.arguments_list = [u'None', u'Theme', u'Cause']
         
         self.dep_list_total = utils.identify_all_dep_labels(load = True) 

@@ -425,7 +425,7 @@ def create_mod_list_trigger(cutoff = 5, load = True):
         #get rid of double elements
         mod_list = list(set(mod_list))
         #save to file.
-        with open('stem_mod_trigger.data', 'wb') as f:
+        with open('mod_list_trigger.data', 'wb') as f:
             cPickle.dump(mod_list, f)
     return mod_list
 

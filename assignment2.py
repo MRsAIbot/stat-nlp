@@ -133,7 +133,7 @@ def build_dataset(file_list, FV, ind, kind='train', mode='trig', clf='nb', load=
 		f.close()
 		return X, y
 
-def crossvalidation(file_list, k=3, mode='trig', clf='nb', r=0.6):
+def crossvalidation(file_list, load, k=3, mode='trig', clf='nb', r=0.6):
 	if mode=='trig':
 		FV = feature_vector.FeatureVector('trigger')
 	elif mode=='arg':
@@ -141,34 +141,35 @@ def crossvalidation(file_list, k=3, mode='trig', clf='nb', r=0.6):
 
 	random.shuffle(file_list)
 	chunks = [ file_list[i::k] for i in xrange(k) ]
-	# chunks = np.array_split(file_list,k)
-	# chunks = np.asarray(chunks).tolist()
 	
-	result = {}
+	result = defaultdict(list)
 
 	for chunk in chunks:
 		ind = chunks.index(chunk)
 		train_list_nest = chunks[:ind] + chunks[ind+1:]
 		train_list = [item for sublist in train_list_nest for item in sublist]
 		valid_list = chunk
-		X_train, y_train = build_dataset(train_list, FV, ind=ind, kind='train', mode=mode, clf=clf, load=True)
+		X_train, y_train = build_dataset(train_list, FV, ind=ind, kind='train', mode=mode, clf=clf, load=load)
 		X_train, y_train = subsample(X_train, y_train, clf='nb', subsampling_rate=r)
-		X_valid, y_valid = build_dataset(valid_list, FV, ind=ind, kind='valid', mode=mode, clf=clf, load=True)
+		X_valid, y_valid = build_dataset(valid_list, FV, ind=ind, kind='valid', mode=mode, clf=clf, load=load)
 
 		if clf=='nb':
 			NB = nb.NaiveBayes()
 			NB.train(np.asarray(X_train.todense()),np.asarray(y_train))
 
-			_, prec, rec, F1 = NB.evaluate(np.asarray(X_train.todense()), np.asarray(y_train))
-			results_dict = {'prec': prec, 'rec': rec, 'F1': F1}
+			_, prec, rec, F1 = NB.evaluate(np.asarray(X_valid.todense()), np.asarray(y_valid))
+			# results_dict = {'prec': prec, 'rec': rec, 'F1': F1}
+			result['prec'].append(prec)
+			result['rec'].append(rec)
+			result['F1'].append(F1)
 
-			run = 'Run {0}'.format(ind+1)
-			result.update({run: results_dict})
+			# run = 'Run {0}'.format(ind+1)
+			# result.update({run: results_dict})
 
 		elif clf=='perc':
 			raise NotImplementedError
-	# subsampling rates: 0.5, 0.6, 0.7, 0.8, 0.9, 0.95
 
+	result.update((x, round(np.mean(y), 4)) for x, y in result.items())
 	return result
 
 
@@ -206,40 +207,19 @@ def subsample(feature_list, trigger_list, clf, subsampling_rate = 0.75):
 		subsampled_trigger_list = np.asarray([trigger_list[i] for i in remaining_entries ])
 		return subsampled_feature_list, subsampled_trigger_list
 
-def crossvalidation_experiment(list_of_rates, file_list, mode, k=3):
+def crossvalidation_experiment(list_of_rates, file_list, load, mode, k=3):
 	result = {}
 	for rate in list_of_rates:
-		result.update({rate: crossvalidation(file_list, k, mode=mode, r=rate)})
+		result.update({rate: crossvalidation(file_list, load=load, k=k, mode=mode, r=rate)})
 
 	return result
 
-def test(k=3):
-	a = ['a','b','c','d','e','f','g','h','i']
-	print a
-	random.shuffle(a)
-	print a
-	chunks = [ a[i::k] for i in xrange(k) ]
-	# chunks = np.array_split(a,k)
-	# chunks = np.asarray(chunks).tolist()
-	print chunks
-	for chunk in chunks:
-		ind = chunks.index(chunk)
-		print "Run {0}".format(ind+1)
-		x_nest = chunks[:ind] + chunks[ind+1:]
-		x = [item for sublist in x_nest for item in sublist]
-		y = chunk
-		print x
-		print y
-
-	return 0
-    
 
 
 def main():
 
 	################### EXPLORATORY DATA ANALYSIS #############################
 
-	# test()
 	# Just testing my functions a bit
 	list_of_files = utils.list_files()
 
@@ -259,8 +239,11 @@ def main():
 
 	# Crossvalidation
 	rates = [0.5,0.6,0.7,0.8,0.9,0.95]
-	x = crossvalidation_experiment(rates[:2], list_of_files, mode='trig', k=3)
-	print x
+	# x = crossvalidation_experiment(rates, list_of_files, load=True, mode='trig', k=3)
+	# pprint(x)
+
+	x2 = crossvalidation_experiment(rates, list_of_files, load=True, mode='arg', k=3)
+	pprint(x2)
 
 	## Naive Bayes on trigger
 """
