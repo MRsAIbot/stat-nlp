@@ -79,7 +79,7 @@ def build_dataset(file_list, FV, ind, kind='train', mode='trig', clf='nb', load=
 	- y: vector of classes
 	"""
 	if load:
-		print 'Loading X matrix and y from file.'
+		print 'Loading feature matrix X and target vector y from file.'
 		file_name_pickle = "Xy_{0}_{1}_{2}_{3}.data".format(kind,mode,clf,ind)
 		f = open(file_name_pickle,"rb")
 		X, y = cPickle.load(f)
@@ -99,7 +99,7 @@ def build_dataset(file_list, FV, ind, kind='train', mode='trig', clf='nb', load=
 						else:
 							X = vstack((X,new_features))
 							y += new_gold
-				if mode == 'arg':
+				elif mode == 'arg':
 					if file_index == 0:
 						X, y = build_argument_data_batch(file_name, FV, clf='nb')
 					else:
@@ -133,29 +133,43 @@ def build_dataset(file_list, FV, ind, kind='train', mode='trig', clf='nb', load=
 		f.close()
 		return X, y
 
-def crossvalidation(file_list, k=5, mode='trig', clf='nb'):
+def crossvalidation(file_list, k=3, mode='trig', clf='nb', r=0.6):
 	if mode=='trig':
 		FV = feature_vector.FeatureVector('trigger')
 	elif mode=='arg':
 		FV = feature_vector.FeatureVector('argument')
 
 	random.shuffle(file_list)
-	chunks = np.array_split(file_list,k)
-	chunks = np.asarray(chunks).tolist()
+	chunks = [ file_list[i::k] for i in xrange(k) ]
+	# chunks = np.array_split(file_list,k)
+	# chunks = np.asarray(chunks).tolist()
+	
+	result = {}
 
 	for chunk in chunks:
 		ind = chunks.index(chunk)
-		train_list = chunks[:ind] + chunks[ind+1:]
+		train_list_nest = chunks[:ind] + chunks[ind+1:]
+		train_list = [item for sublist in train_list_nest for item in sublist]
 		valid_list = chunk
-		X_train, y_train = build_dataset(train_list, FV, ind=ind, kind='train', mode=mode, clf=clf, load=False)
-		X_valid, y_valid = build_dataset(valid_list, FV, ind=ind, kind='valid', mode=mode, clf=clf, load=False)
+		X_train, y_train = build_dataset(train_list, FV, ind=ind, kind='train', mode=mode, clf=clf, load=True)
+		X_train, y_train = subsample(X_train, y_train, clf='nb', subsampling_rate=r)
+		X_valid, y_valid = build_dataset(valid_list, FV, ind=ind, kind='valid', mode=mode, clf=clf, load=True)
 
 		if clf=='nb':
 			NB = nb.NaiveBayes()
 			NB.train(np.asarray(X_train.todense()),np.asarray(y_train))
+
+			_, prec, rec, F1 = NB.evaluate(np.asarray(X_train.todense()), np.asarray(y_train))
+			results_dict = {'prec': prec, 'rec': rec, 'F1': F1}
+
+			run = 'Run {0}'.format(ind+1)
+			result.update({run: results_dict})
+
 		elif clf=='perc':
-			pass
-	pass
+			raise NotImplementedError
+	# subsampling rates: 0.5, 0.6, 0.7, 0.8, 0.9, 0.95
+
+	return result
 
 
 
@@ -191,6 +205,33 @@ def subsample(feature_list, trigger_list, clf, subsampling_rate = 0.75):
 		subsampled_feature_list = feature_list.tocsr()[remaining_entries].tocoo()
 		subsampled_trigger_list = np.asarray([trigger_list[i] for i in remaining_entries ])
 		return subsampled_feature_list, subsampled_trigger_list
+
+def crossvalidation_experiment(list_of_rates, file_list, mode, k=3):
+	result = {}
+	for rate in list_of_rates:
+		result.update({rate: crossvalidation(file_list, k, mode=mode, r=rate)})
+
+	return result
+
+def test(k=3):
+	a = ['a','b','c','d','e','f','g','h','i']
+	print a
+	random.shuffle(a)
+	print a
+	chunks = [ a[i::k] for i in xrange(k) ]
+	# chunks = np.array_split(a,k)
+	# chunks = np.asarray(chunks).tolist()
+	print chunks
+	for chunk in chunks:
+		ind = chunks.index(chunk)
+		print "Run {0}".format(ind+1)
+		x_nest = chunks[:ind] + chunks[ind+1:]
+		x = [item for sublist in x_nest for item in sublist]
+		y = chunk
+		print x
+		print y
+
+	return 0
     
 
 
@@ -198,6 +239,7 @@ def main():
 
 	################### EXPLORATORY DATA ANALYSIS #############################
 
+	# test()
 	# Just testing my functions a bit
 	list_of_files = utils.list_files()
 
@@ -215,16 +257,21 @@ def main():
 
 	########################## NAIVE BAYES ####################################
 
-	## Naive Bayes on trigger
+	# Crossvalidation
+	rates = [0.5,0.6,0.7,0.8,0.9,0.95]
+	x = crossvalidation_experiment(rates[:2], list_of_files, mode='trig', k=3)
+	print x
 
+	## Naive Bayes on trigger
+"""
 	# Read data
 	print "Experiment 1: Naive Bayes predicting triggers"
 	FV_trig = feature_vector.FeatureVector('trigger')
 	train_list, valid_list = utils.create_training_and_validation_file_lists(list_of_files)
 
-	X_train, y_train = build_dataset(train_list, FV_trig, ind=1, kind='train', mode='trig', clf='nb', load=True)
+	X_train, y_train = build_dataset(train_list, FV_trig, ind=1, kind='train', mode='trig', clf='nb', load=False)
 	X_train, y_train = subsample(X_train, y_train, clf='nb', subsampling_rate=0.60)
-	X_valid, y_valid = build_dataset(valid_list, FV_trig, ind=1, kind='valid', mode='trig', clf='nb', load=True)
+	X_valid, y_valid = build_dataset(valid_list, FV_trig, ind=1, kind='valid', mode='trig', clf='nb', load=False)
 
 	NB_trig = nb.NaiveBayes()
 	NB_trig.train(np.asarray(X_train.todense()),np.asarray(y_train))
@@ -249,7 +296,7 @@ def main():
 	FV_arg = feature_vector.FeatureVector('argument')
 
 	X_train, y_train = build_dataset(train_list, FV_arg, ind=1, kind='train', mode='arg', clf='nb', load=True)
-	X_train, y_train = subsample(X_train, y_train, clf='nb', subsampling_rate=0.90)
+	X_train, y_train = subsample(X_train, y_train, clf='nb', subsampling_rate=0.98)
 	X_valid, y_valid = build_dataset(valid_list, FV_arg, ind=1, kind='valid', mode='arg', clf='nb', load=True)
 
 	NB_arg = nb.NaiveBayes()
@@ -290,6 +337,7 @@ def main():
 	# clf = BernoulliNB()
 	# clf.fit(X_train,y_train)
 	# print(clf.predict(X))
+"""
 
 
 if __name__ == '__main__':

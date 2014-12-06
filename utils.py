@@ -368,9 +368,6 @@ def create_training_and_validation_file_lists(file_list, ratio = 0.75, load = Tr
     return training_files, validation_files
 
 
-
-
-
 def correct_end_of_lines_in_saved_list(input_list):
     output_list = []
     for element in input_list:
@@ -379,3 +376,56 @@ def correct_end_of_lines_in_saved_list(input_list):
         else:
             output_list += [element]
     return output_list
+
+def identify_typical_trigger_word_mods(return_as_list = True, load = True):
+    if load:
+        with open('dep_list_total.data', 'rb') as f:
+            loaded = cPickle.load(f)
+        key_list = correct_end_of_lines_in_saved_list(loaded)
+        return key_list
+    else:
+        mod_dict = defaultdict(int)
+        file_list = list_files()
+
+        for i_f, f in enumerate(file_list):
+            print i_f, 'of', len(file_list), 'identifying all mods'
+            f_json = load_json_file(f)
+            for sentence in f_json['sentences']:
+                eventCandidates = sentence['eventCandidates']
+                for ec in eventCandidates:
+                    for dep in sentence['deps']:
+                        if dep['head'] in range(ec['begin'],ec['end']+1):
+                            mod = sentence['tokens'][dep['mod']]['word']
+                            mod_dict[mod] +=1
+        key_list = mod_dict.keys()
+        #save data
+        with open('mod_list_total.data', 'wb') as f:
+            cPickle.dump(key_list, f)
+
+    if return_as_list:
+        return key_list
+    else:
+        return mod_dict
+
+def create_mod_list_trigger(cutoff = 5, load = True):
+    if load == True:
+        print ('Loading mod-list from file.')
+        with open('mod_list_trigger.data', 'rb') as f:
+            loaded = cPickle.load(f)
+        mod_list = correct_end_of_lines_in_saved_list(loaded)
+    else:
+        print ('Computing mod-list')
+        sd = identify_typical_trigger_word_mods(return_as_list=False, load=False)
+        mod_list = []
+        for key in sd.keys():
+            counts = sd[key]
+            if counts > cutoff:
+                mod_list += [key]
+
+        #get rid of double elements
+        mod_list = list(set(mod_list))
+        #save to file.
+        with open('stem_mod_trigger.data', 'wb') as f:
+            cPickle.dump(mod_list, f)
+    return mod_list
+

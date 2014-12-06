@@ -32,7 +32,7 @@ class FeatureVector():
         self.trigger_list = utils.get_trigger_list()
         self.stem_list_triggers = utils.create_stem_list_trigger(cutoff = 5, load=True)
         self.stem_list_arguments = utils.create_stem_list_arguments(cutoff = 5, load=True)
-        #self.mod_list_triggers = utils.create_mod_list_trigger(cutoff = 5)
+        self.mod_list_triggers = utils.create_mod_list_trigger(cutoff = 5, load=False)
         self.arguments_list = [u'None', u'Theme', u'Cause']
         
         self.dep_list_total = utils.identify_all_dep_labels(load = True) 
@@ -162,10 +162,20 @@ class FeatureVector():
                     index = self.dep_list_total.index(dep_label)
                     dep_vec[index] = 1.0
         return list(dep_vec)
-        
-    
-    #def phi_trigger_3(self, token_index, sentence):
 
+    def phi_trigger_5(self, token_index, sentence):
+        #evaluate head of token.
+        mod_vec = np.zeros(len(self.mod_list_triggers), dtype = np.uint8)
+
+        #return a vector with 1 for the mods for which the token is head.
+        for dep in sentence['deps']:
+            if dep['head'] == token_index:
+                mod = sentence['tokens'][dep['mod']]
+                if mod in self.mod_list_triggers:
+                    index = self.mod_list_triggers.index(mod)
+                    mod_vec[index] = 1.0
+        return list(mod_vec)
+        
 
     """ARGUMENT FEATURES"""
     def phi_argument_0(self, token_index, arg_index, sentence):
