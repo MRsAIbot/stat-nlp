@@ -12,6 +12,7 @@ import utils
 import json
 import time
 import warnings
+import cPickle
 
 
 #subsample the >None< events, to obtain more balanced data set.
@@ -103,7 +104,7 @@ def test_perceptron(FV, Lambda, file_list, mode, subsample = False):
     if subsample:
         print '###################################'
         print 'Nones before subsampling', gold_list.count(u'None'), 'of', len(gold_list)
-        feature_list, gold_list = subsample(feature_list, gold_list, subsampling_rate = 0.95)    
+        feature_list, gold_list = subsample(feature_list, gold_list, subsampling_rate = 0.8)    
         print 'Nones after subsampling', gold_list.count(u'None'), 'of',len(gold_list)
 
     predictions = []    
@@ -136,7 +137,7 @@ def predict(feature_matrix, Lambda, return_scores = False):
         return predicted_class
 
 
-def train_perceptron(FV, training_files, T_max = 1, LR = 1.0, mode = 'Trigger'):
+def train_perceptron(FV, training_files, T_max = 1, LR = 1.0, mode = 'Trigger', subs_rate = 0.8):
     t_start = time.time()
     N_files = len(training_files)
     
@@ -157,7 +158,7 @@ def train_perceptron(FV, training_files, T_max = 1, LR = 1.0, mode = 'Trigger'):
     print '###################################'
     print 'Nones before subsampling', gold_list.count(u'None'), 'of', len(gold_list)
     if mode == 'Trigger':
-        feature_list, gold_list = subsample(feature_list, gold_list, subsampling_rate = 0.6)    
+        feature_list, gold_list = subsample(feature_list, gold_list, subs_rate)    
     elif mode == 'Argument':
         feature_list, gold_list = subsample(feature_list, gold_list, subsampling_rate = 0.95)    
     print 'Nones after subsampling', gold_list.count(u'None'), 'of',len(gold_list)
@@ -205,19 +206,24 @@ def train_perceptron(FV, training_files, T_max = 1, LR = 1.0, mode = 'Trigger'):
  
 
 
-if 0:
+if 1:
     #Argument prediction
     FV_arg = feature_vector.FeatureVector('argument')
     train,valid = utils.create_training_and_validation_file_lists(ratio = 0.75, load=True)    
-    Lambda, misclassification_rates = train_perceptron(FV_arg, train[20:70], T_max = 10, LR = 10.0, mode='Argument')   
-    plt.plot(misclassification_rates)
+    Lambda2, misclassification_rates2 = train_perceptron(FV_arg, train, T_max = 20, LR = 10.0, mode='Argument')   
+    plt.plot(misclassification_rates2)
 
-    (y_hat, y) = test_perceptron(FV_arg, Lambda, valid[20:40], mode='Argument')
+    (y_hat, y) = test_perceptron(FV_arg, Lambda2, valid, mode='Argument')
     errors = [1 for y1,y2 in zip(y_hat, y) if y1!=y2]
     validation_error = len(errors)/float(len(y))
     print (validation_error)
     utils.evaluate(y, y_hat, FV_arg, mode = 'Arguments')
 
+    savedata = (Lambda2,misclassification_rates2)
+    with open('perceptron_argument.data', 'wb') as f:
+        cPickle.dump(savedata, f)  
+    with open('perceptron_argument.data', 'rb') as f:
+        LLambda = cPickle.load(f)
 
 
 if 0:
@@ -225,14 +231,26 @@ if 0:
     FV_trig = feature_vector.FeatureVector('trigger')
     train,valid = utils.create_training_and_validation_file_lists(ratio = 0.75, load=True)    
 
-    Lambda, misclassification_rates = train_perceptron(FV_trig, train[:20], T_max = 3, LR = 10.0, mode='Trigger')   
+    Lambda, misclassification_rates = train_perceptron(FV_trig, train, T_max = 20, 
+                                                       LR = 10.0, mode='Trigger', subs_rate=0.8)   
     plt.plot(misclassification_rates)
+    
+    savedata = (Lambda,misclassification_rates)
+    with open('perceptron_triggeraa.data', 'wb') as f:
+        cPickle.dump(savedata, f)  
+    with open('perceptron_triggeraa.data', 'rb') as f:
+        (LLambda, misc_trig) = cPickle.load(f)  
 
-    (y_hat, y) = test_perceptron(FV_trig, Lambda, valid[:20], mode='Trigger')
+    (y_hat, y) = test_perceptron(FV_trig, Lambda, valid, mode='Trigger')
     errors = [1 for y1,y2 in zip(y_hat, y) if y1!=y2]
     validation_error = len(errors)/float(len(y))  
     print (validation_error)
     utils.evaluate(y, y_hat, FV_trig, mode = 'Trigger')
+    
+    with open('perceptron_trigger_predictions.data', 'wb') as f: 
+        cPickle.dump((y_hat, y), f)
+    with open('perceptron_trigger_predictions.data', 'rb') as f:
+        (yy_hat, yy) = cPickle.load(f) 
 
     
     

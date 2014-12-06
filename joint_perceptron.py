@@ -261,9 +261,22 @@ def build_joint_data_batch(file_name, FV, subsample = True):
             gold_list += [(gold_trigger, gold_arguments)]
             feature_matrix_list += [(trigger_matrix, argument_matrices)]
     if subsample:
-        return subsample_jointly(feature_matrix_list, gold_list, rate_trig=.9, rate_arg=.9)
-    else: 
-        return (feature_matrix_list, gold_list)
+        trig_list = [item[0] for item in gold_list]
+        arg_list = [item[1] for item in gold_list]
+        arg_list = [item for sublist in arg_list for item in sublist]
+        print "before subsampling Trigger:", trig_list.count(u'None'), 'of',len(gold_list)
+        print "before subsampling Arg:", arg_list.count(u'None'), 'of', len(arg_list) 
+        
+        (feature_matrix_list, gold_list) = subsample_jointly(feature_matrix_list, 
+                                            gold_list, rate_trig=.7, rate_arg=.9)
+                                            
+        trig_list = [item[0] for item in gold_list]
+        arg_list = [item[1] for item in gold_list]
+        arg_list = [item for sublist in arg_list for item in sublist]
+        print "after subsampling Trigger:", trig_list.count(u'None'), 'of',len(gold_list)
+        print "after subsampling Arg:", arg_list.count(u'None'), 'of', len(arg_list) 
+
+    return (feature_matrix_list, gold_list)
 
 
 # create predictions for test set
@@ -277,11 +290,13 @@ def test_perceptron_joint(FV, Lambda_trig, Lambda_arg, file_list, mode, subsampl
         feature_list += feat_list_one_file
         gold_list += gold_list_one_file
 
+    """
     if subsample:
         print '###################################'
         print 'Nones before subsampling', gold_list.count(u'None'), 'of', len(gold_list)
         feature_list, gold_list = subsample(feature_list, gold_list, subsampling_rate = 0.95)    
         print 'Nones after subsampling', gold_list.count(u'None'), 'of',len(gold_list)
+    """
 
     predictions_e = []    
     predictions_a = []
@@ -325,7 +340,7 @@ def train_perceptron_joint(FV, training_files, T_max = 1, LR = 1.0,
     gold_list = []
     for i_f, filename in enumerate(training_files):
         print 'Building training data from json file ',i_f
-        (feat_list_one_file, gold_list_one_file) = build_joint_data_batch(filename, FV)
+        (feat_list_one_file, gold_list_one_file) = build_joint_data_batch(filename, FV, subsample=True)
         
         feature_list += feat_list_one_file
         gold_list += gold_list_one_file
@@ -407,17 +422,17 @@ def train_perceptron_joint(FV, training_files, T_max = 1, LR = 1.0,
             
             
             
-if 0:
+if 1:
     #joint prediction
     FV_joint = feature_vector.FeatureVector('joint')
     FV = FV_joint
     train,valid = utils.create_training_and_validation_file_lists(ratio = 0.75, load=True)    
 
-    L_t, L_a, misc_t_,misc_a = train_perceptron_joint(FV, train[:10], T_max = 50, 
-                                            LR = 10.0, mode = 'Joint_unconstrained')
+    L_t, L_a, misc_t_,misc_a = train_perceptron_joint(FV, train[:5], T_max = 5, 
+                                            LR = 10.0, mode = 'Joint_constrained')
 
     (p_e,g_e, p_a, g_a) = test_perceptron_joint(FV, L_t, L_a, valid[:5], 
-                                                mode = 'Joint_unconstrained', 
+                                                mode = 'Joint_constrained', 
                                                 subsample = False)
     
     
@@ -431,7 +446,7 @@ if 0:
     errors_e = [1 for y1,y2 in zip(p_e, g_e) if y1!=y2]
     validation_error_e = len(errors_e)/float(len(g_e))  
     print 'Trigger prediction error (accuracy)',(validation_error_e)
-    utils.evaluate(p_e, g_e, FV, mode = 'Trigger')
+    utils.evaluate(g_e, p_e, FV, mode = 'Trigger')
     
     #evaluate argument predictions
     pp_a = [i for sublist in p_a for i in sublist]
@@ -439,11 +454,11 @@ if 0:
     errors_a = [1 for y1,y2 in zip(pp_a, gg_a) if y1!=y2]
     validation_error_a = len(errors_a)/float(len(gg_a))  
     print 'Argument prediction error (accuracy)',(validation_error_a)
-    utils.evaluate(pp_a, gg_a, FV, mode = 'Arguments')
+    utils.evaluate(gg_a, pp_a, FV, mode = 'Arguments')
     
 
     
-if 0:
+if 1:
     plt.figure(2)
     plt.subplot(211)
     plt.plot(np.transpose(L_t))
