@@ -111,7 +111,8 @@ def enforce_one_Theme(v, scores, Theme_argument):
         Delta = []
         for j in range(len(v)):
             #check score difference between 'Theme' and unconstr. prediction
-            Delta_j = scores[j][Theme_argument] - scores[j][v[j]]
+            #Delta_j = scores[j][Theme_argument] - scores[j][v[j]]
+            Delta_j = scores[j][v[j]] - scores[j][Theme_argument] 
             Delta += [Delta_j]
             
         convert = Delta.index(min(Delta))
@@ -144,22 +145,24 @@ def argmax_joint_unconstrained(X_trig, Lambda_trig, X_arg, Lambda_arg, FV):
     Cause_argument = FV.arguments_list.index(u'Cause')
     Theme_argument = FV.arguments_list.index(u'Theme')
     
-    #COMPUTE s1: None trigger and None arguments always
+    #COMPUTE s1: case trigger==None and all arguments are None
     e_1 = None_trigger
     a_1 = [None_argument]*len(X_arg)
     s1 = total_score_joint(X_trig, Lambda_trig, X_arg, Lambda_arg, e_1, a_1)
                      
                      
 
-    """ HERE IS A PROBLEM. CAN STILL PICK 'CAUSE' FOR NON-REGULATION TRIGGERS""" 
-    #COMPUTE s2: Regulation triggers allowed
-    legal_classes = range(10)
-    legal_classes.remove(None_trigger)
-    e_2 = predict_under_constraint(X_trig, Lambda_trig, legal_classes)
+    #COMPUTE s2: ONLY Regulation triggers are allowed
+    #identify the trigger indices for regulation events [also pos/neg-regul.]
+    Regulation_triggers = [i for i in range(len(FV.trigger_list)) \
+                           if 'egulation' in FV.trigger_list[i]]
+    legal_triggers = Regulation_triggers
 
+    e_2 = predict_under_constraint(X_trig, Lambda_trig, legal_triggers)
     a_2 = []
     scores = []
     for j in range(len(X_arg)):
+        #generate free predictions, might so far miss a Theme argument 
         a_j, sco = predict_under_constraint(X_arg[j], Lambda_arg, range(3), 
                                                 return_scores = True) 
         a_2  += [ a_j ]
@@ -171,15 +174,12 @@ def argmax_joint_unconstrained(X_trig, Lambda_trig, X_arg, Lambda_arg, FV):
 
     
     
-    #COMPUTE s3: no regulation triggers or regulation events allowed
+    #COMPUTE s3: no regulation [also pos/neg regul.] triggers or None trigger
+    #allowed. Restrict possible argument labels to None and Theme [skip Cause].
     legal_triggers = range(10)
-    legal_triggers.remove(None_trigger)
-    #identify the trigger indices for regulation events
-    Regulation_triggers = [i for i in range(len(FV.trigger_list)) \
-                           if 'egulation' in FV.trigger_list[i]]
-     
     for r in Regulation_triggers:
         legal_triggers.remove(r)
+    legal_triggers.remove(None_trigger)
     e_3 = predict_under_constraint(X_trig, Lambda_trig, legal_triggers)
     
     #argument & scores: Cause arguments not allowed
@@ -193,12 +193,11 @@ def argmax_joint_unconstrained(X_trig, Lambda_trig, X_arg, Lambda_arg, FV):
                                             return_scores = True) 
         a_3  += [ a_j ]
         scores  += [ sco ]
-        
     a_3 = enforce_one_Theme(a_3, scores, Theme_argument)    
     s3 = total_score_joint(X_trig, Lambda_trig, X_arg, Lambda_arg, e_3, a_3 )
     
     
-    #identify highest scoring case; return its parameters
+    #Compare s1,s2,s3. Identify highest scoring case; return its parameters
     best_score = [s1,s2,s3].index(max([s1,s2,s3]))
     if best_score == 0:
         return (e_1, a_1)
@@ -265,21 +264,15 @@ def build_joint_data_batch(file_name, FV):
     
     
 
-"""
+
 # create predictions for test set
-def test_perceptron_joint(FV, Lambda, file_list, mode, subsample = False):
+def test_perceptron_joint(FV, Lambda_trig, Lambda_arg, file_list, mode, subsample = False):
     #Test data from all files in file_list
     feature_list = []
     gold_list = []
-    for i_f, filename in enumerate(file_list):
+    for i_f, file_name in enumerate(file_list):
         print 'Building test data from json file ',i_f , 'of', len(file_list)
-        if mode == 'Trigger':
-            (feat_list_one_file, gold_list_one_file) = build_trigger_data_batch(filename, FV)
-        elif mode == 'Argument':
-            (feat_list_one_file, gold_list_one_file) = build_argument_data_batch(filename, FV)
-        else:
-            warnings.warn('Error in test_perceptron: Must have mode "Trigger" or "Argument"!' )
-            
+        (feat_list_one_file, gold_list_one_file) = build_joint_data_batch(file_name, FV)
         feature_list += feat_list_one_file
         gold_list += gold_list_one_file
 
@@ -289,8 +282,28 @@ def test_perceptron_joint(FV, Lambda, file_list, mode, subsample = False):
         feature_list, gold_list = subsample(feature_list, gold_list, subsampling_rate = 0.95)    
         print 'Nones after subsampling', gold_list.count(u'None'), 'of',len(gold_list)
 
-"""
+    predictions_e = []    
+    predictions_a = []
+    gold_e = []
+    gold_a = []
+    N_samples = len(feature_list)
 
+    for sample in range(N_samples):
+        X_trigger = feature_list[sample][0]
+        X_arguments = feature_list[sample][1]
+        
+        gold_trigger = gold_list[sample][0]
+        gold_arguments = gold_list[sample][1]
+        
+        gold_e += [FV.trigger_list.index(gold_trigger)]
+        gold_a += [ [ FV.arguments_list.index(ga) for ga in gold_arguments] ]
+        
+        y_hat_e, y_hat_a = predict_joint(X_trigger, Lambda_trig, \
+                                         X_arguments, Lambda_arg, mode)    
+        predictions_e += [y_hat_e]    
+        predictions_a += [y_hat_a]
+            
+    return predictions_e, gold_e, predictions_a, gold_a
 
 
 
@@ -398,5 +411,32 @@ if 1:
     FV = FV_joint
     train,valid = utils.create_training_and_validation_file_lists(ratio = 0.75, load=True)    
 
-    L_t, L_a, misc_t_,misc_a = train_perceptron_joint(FV, train[:2], T_max = 10, 
+    L_t, L_a, misc_t_,misc_a = train_perceptron_joint(FV, train[20:70], T_max = 10, 
                                             LR = 10.0, mode = 'Joint_unconstrained')
+
+    (p_e,g_e, p_a, g_a) = test_perceptron_joint(FV, L_t, L_a, valid[20:40], 
+                                                mode = 'Joint_unconstrained', 
+                                                subsample = False)
+    
+    #evaluate trigger predictions
+    errors_e = [1 for y1,y2 in zip(p_e, g_e) if y1!=y2]
+    validation_error_e = len(errors_e)/float(len(g_e))  
+    print 'Trigger prediction error (accuracy)',(validation_error_e)
+    utils.evaluate(p_e, g_e, FV, mode = 'Trigger')
+    
+    #evaluate argument predictions
+    pp_a = [i for sublist in p_a for i in sublist]
+    gg_a = [i for sublist in g_a for i in sublist]
+    errors_a = [1 for y1,y2 in zip(pp_a, gg_a) if y1!=y2]
+    validation_error_a = len(errors_a)/float(len(gg_a))  
+    print 'Argument prediction error (accuracy)',(validation_error_a)
+    utils.evaluate(pp_a, gg_a, FV, mode = 'Arguments')
+    
+
+    
+if 1:
+    plt.figure(2)
+    plt.subplot(211)
+    plt.plot(np.transpose(L_t))
+    plt.subplot(212)
+    plt.plot(np.transpose(L_a))
