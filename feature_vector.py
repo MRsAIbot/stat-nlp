@@ -5,16 +5,13 @@ import utils
 import inspect
 
 """
-Class template for feature vectors. f(x,c)
-Extending the dictionary class to return 0 if one tries to acceess a feature vector for a missing key.
-An alternative implementation is commented below in case the method of extending the dict class is not adequate.
+Class for feature vectors.
 """
 class FeatureVector():
     # this extended dictionary class is initialised by passing a list of functions to it. These are then assigned as dictionary items upon init.
     def __init__(self, mode = 'argument'):
         if mode not in ['argument', 'trigger', 'joint']:
             print 'ERROR, wrong mode of calling FeatureVector class! '
-
 
         #get handles to all phi functions
         self.methods = inspect.getmembers(self, predicate=inspect.ismethod)
@@ -25,11 +22,11 @@ class FeatureVector():
             self.phi_list_arg = [method[1] for method in self.methods if 'phi_argument' in method[0]]
             self.phi_list_trig = [method[1] for method in self.methods if 'phi_trigger' in method[0]]
 
-
         #load relevant other data from presaved files.
         self.listOfAllFiles = utils.list_files()
         self.all_grammar_tags = utils.get_grammar_tag_list()
         self.trigger_list = utils.get_trigger_list()
+
         self.stem_list_triggers = utils.create_stem_list_trigger(cutoff = 5, load=True)
         self.stem_list_arguments = utils.create_stem_list_arguments(cutoff = 5, load=True)
         self.mod_list_triggers = utils.create_mod_list_trigger(cutoff = 25, load=False)
@@ -72,6 +69,7 @@ class FeatureVector():
             
         return sparse_feature_matrix
 
+    
     #Get feature matrix for argument prediction: for pairs of tokens and 
     #argument candidates. Otherwise same skeleton as "get_feature_matrix()"
     def get_feature_matrix_argument_prediction(self, token_index, arg_index, sentence, clf):
@@ -101,9 +99,9 @@ class FeatureVector():
                                             shape=(n_classes,d))
             
         return sparse_feature_matrix
-
-
-
+    
+    
+    
     # feature templates take as input a token_index and sentence (which is
     # a sentence from the json dictionary, containing all information about grammar
     # tags, links and relations to other tokens, their positions, and finally

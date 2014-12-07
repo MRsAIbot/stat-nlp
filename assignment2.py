@@ -1,12 +1,13 @@
+import json
 import nltk
 import cPickle
 from collections import defaultdict
 from pprint import pprint
 import feature_vector
+import utils
 import numpy as np
 import random
 from scipy.sparse import vstack
-from sklearn.naive_bayes import BernoulliNB
 import naivebayes2 as nb
 import utils
 import warnings
@@ -216,16 +217,15 @@ def crossvalidation_experiment(list_of_rates, file_list, load, mode, k=3):
 
 	return result
 
-
-
 def main():
 
 	################### EXPLORATORY DATA ANALYSIS #############################
 
 	# Just testing my functions a bit
 	list_of_files = utils.list_files()
-
-	x = utils.load_json_file(list_of_files[0])
+	print (list_of_files[0])
+	f1 = utils.load_json_file(list_of_files[0])
+	pprint(len(f1['sentences']))
 	    
 	# Finding and counting all event triggers
 	t = utils.get_all_triggers(list_of_files)
@@ -299,28 +299,6 @@ def main():
 	print "Recall: {0}".format(rec)
 	print "F1-measure: {0}".format(F1)
 	print "Confusion matrix:\n", np.int64(CM)
-
-	# # Test Naive Bayes
-	# X = np.random.randint(2, size=(20,100))
-	# print X
-	# y = np.array([t.keys()[i] for i in [random.randint(0,9) for p in range(20)]])
-	# print y
-	# # a,b = X[2:3].shape
-	# # print a
-	# # print b
-
-	# NB = nb.NaiveBayes()
-	# NB.train(X,y)
-	# print(NB.predict(X))
-	# CM, prec, rec, F1 = NB.evaluate(X,y)
-	# print prec
-	# print rec
-	# print F1
-	# print CM
-
-	# clf = BernoulliNB()
-	# clf.fit(X_train,y_train)
-	# print(clf.predict(X))
 
 
 if __name__ == '__main__':
