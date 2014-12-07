@@ -3,6 +3,13 @@ stat-nlp
 
 This is a repository for the homework assignments of Statistical Natural Language Processing.
 
+To run
+------------------
+For a short demonstration, run the following command
+```
+python assignment2.py
+```
+
 Workflow
 ------------------
 
