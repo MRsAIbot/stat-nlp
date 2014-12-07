@@ -150,7 +150,9 @@ def crossvalidation(file_list, load, k=3, mode='trig', clf='nb', r=0.6):
 		train_list = [item for sublist in train_list_nest for item in sublist]
 		valid_list = chunk
 		X_train, y_train = build_dataset(train_list, FV, ind=ind, kind='train', mode=mode, clf=clf, load=load)
+		# print np.in1d(y_train, 'None').sum() # test if subsampling works fine
 		X_train, y_train = subsample(X_train, y_train, clf='nb', subsampling_rate=r)
+		# print np.in1d(y_train, 'None').sum() # test if subsampling works fine
 		X_valid, y_valid = build_dataset(valid_list, FV, ind=ind, kind='valid', mode=mode, clf=clf, load=load)
 
 		if clf=='nb':
@@ -242,29 +244,28 @@ def main():
 	# x = crossvalidation_experiment(rates, list_of_files, load=True, mode='trig', k=3)
 	# pprint(x)
 
-	x2 = crossvalidation_experiment(rates, list_of_files, load=True, mode='arg', k=3)
-	pprint(x2)
+	# x2 = crossvalidation_experiment(rates, list_of_files, load=True, mode='arg', k=3)
+	# pprint(x2)
 
 	## Naive Bayes on trigger
-"""
 	# Read data
 	print "Experiment 1: Naive Bayes predicting triggers"
 	FV_trig = feature_vector.FeatureVector('trigger')
 	train_list, valid_list = utils.create_training_and_validation_file_lists(list_of_files)
 
-	X_train, y_train = build_dataset(train_list, FV_trig, ind=1, kind='train', mode='trig', clf='nb', load=False)
-	X_train, y_train = subsample(X_train, y_train, clf='nb', subsampling_rate=0.60)
-	X_valid, y_valid = build_dataset(valid_list, FV_trig, ind=1, kind='valid', mode='trig', clf='nb', load=False)
+	X_train, y_train = build_dataset(train_list, FV_trig, ind=1, kind='train', mode='trig', clf='nb', load=True)
+	X_train, y_train = subsample(X_train, y_train, clf='nb', subsampling_rate=0.50)
+	X_valid, y_valid = build_dataset(valid_list, FV_trig, ind=1, kind='valid', mode='trig', clf='nb', load=True)
 
 	NB_trig = nb.NaiveBayes()
 	NB_trig.train(np.asarray(X_train.todense()),np.asarray(y_train))
 
-	print "Evaluate Naive Bayes classifer predicting triggers on the train set..."
-	CM, prec, rec, F1 = NB_trig.evaluate(np.asarray(X_train.todense()), np.asarray(y_train))
-	print "Precision: {0}".format(prec)
-	print "Recall: {0}".format(rec)
-	print "F1-measure: {0}".format(F1)
-	print "Confusion matrix:\n", np.int64(CM)
+	# print "Evaluate Naive Bayes classifer predicting triggers on the train set..."
+	# CM, prec, rec, F1 = NB_trig.evaluate(np.asarray(X_train.todense()), np.asarray(y_train))
+	# print "Precision: {0}".format(prec)
+	# print "Recall: {0}".format(rec)
+	# print "F1-measure: {0}".format(F1)
+	# print "Confusion matrix:\n", np.int64(CM)
 
 	print "Evaluate Naive Bayes classifer predicting triggers on the validation set..."
 	CM, prec, rec, F1 = NB_trig.evaluate(np.asarray(X_valid.todense()), np.asarray(y_valid))
@@ -279,18 +280,18 @@ def main():
 	FV_arg = feature_vector.FeatureVector('argument')
 
 	X_train, y_train = build_dataset(train_list, FV_arg, ind=1, kind='train', mode='arg', clf='nb', load=True)
-	X_train, y_train = subsample(X_train, y_train, clf='nb', subsampling_rate=0.98)
+	X_train, y_train = subsample(X_train, y_train, clf='nb', subsampling_rate=0.50)
 	X_valid, y_valid = build_dataset(valid_list, FV_arg, ind=1, kind='valid', mode='arg', clf='nb', load=True)
 
 	NB_arg = nb.NaiveBayes()
 	NB_arg.train(np.asarray(X_train.todense()), np.asarray(y_train))
 
-	print "Evaluate Naive Bayes classifer predicting arguments on the train set..."
-	CM, prec, rec, F1 = NB_arg.evaluate(np.asarray(X_train.todense()), np.asarray(y_train))
-	print "Precision: {0}".format(prec)
-	print "Recall: {0}".format(rec)
-	print "F1-measure: {0}".format(F1)
-	print "Confusion matrix:\n", np.int64(CM)
+	# print "Evaluate Naive Bayes classifer predicting arguments on the train set..."
+	# CM, prec, rec, F1 = NB_arg.evaluate(np.asarray(X_train.todense()), np.asarray(y_train))
+	# print "Precision: {0}".format(prec)
+	# print "Recall: {0}".format(rec)
+	# print "F1-measure: {0}".format(F1)
+	# print "Confusion matrix:\n", np.int64(CM)
 
 	print "Evaluate Naive Bayes classifer predicting arguments on the validation set..."
 	CM, prec, rec, F1 = NB_arg.evaluate(np.asarray(X_valid.todense()), np.asarray(y_valid))
@@ -320,7 +321,6 @@ def main():
 	# clf = BernoulliNB()
 	# clf.fit(X_train,y_train)
 	# print(clf.predict(X))
-"""
 
 
 if __name__ == '__main__':

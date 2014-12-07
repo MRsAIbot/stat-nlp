@@ -2,6 +2,7 @@ import numpy as np
 from scipy.sparse import issparse
 from sklearn.preprocessing import LabelBinarizer
 from scipy.sparse import coo_matrix
+from pprint import pprint
 
 
 class NaiveBayes(object):
@@ -70,6 +71,7 @@ class NaiveBayes(object):
 
 		n_labels = labels.size
 		label_to_ind = dict((y, x) for x, y in enumerate(labels))
+		pprint(label_to_ind)
 		none_ind = label_to_ind.get('None')
 
 		# convert yt, yp into index
