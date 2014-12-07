@@ -2,6 +2,7 @@ import numpy as np
 from scipy.sparse import issparse
 from sklearn.preprocessing import LabelBinarizer
 from scipy.sparse import coo_matrix
+from pprint import pprint
 
 
 class NaiveBayes(object):
@@ -70,14 +71,14 @@ class NaiveBayes(object):
 
 		n_labels = labels.size
 		label_to_ind = dict((y, x) for x, y in enumerate(labels))
+		pprint(label_to_ind)
+		none_ind = label_to_ind.get('None')
+
 		# convert yt, yp into index
 		y_pred = np.array([label_to_ind.get(x, n_labels + 1) for x in y_pred])
 		y_true = np.array([label_to_ind.get(x, n_labels + 1) for x in y_true])
 
 		# intersect y_pred, y_true with labels, eliminate items not in labels
-		print len(y_pred)
-		print len(y_true)
-		print n_labels
 
 		ind = np.logical_and(y_pred < n_labels, y_true < n_labels)
 		y_pred = y_pred[ind]
@@ -86,14 +87,29 @@ class NaiveBayes(object):
 		CM = coo_matrix((np.ones(y_true.shape[0]), (y_true, y_pred)), shape=(n_labels, n_labels)).toarray()
 
 		# Compute Recall
-		recall_denom = np.sum(CM, axis=1)
+
+		mask = np.ones(len(labels), dtype=bool)
+		mask[none_ind] = False
+		
+		# CM = np.delete(CM, none_ind, 0)
+		# CM = np.delete(CM, none_ind, 1)
+
 		diag = CM.diagonal()
-		# Macro-average
-		recall = np.mean(np.divide(diag, recall_denom))
+		diag = np.sum(diag[mask])
+
+		recall_denom = np.sum(CM, axis=1)
+		recall_denom = np.sum(recall_denom[mask])
+
+		recall = diag/recall_denom
 
 		# Compute precision
 		prec_denom = np.sum(CM, axis=0)
-		precision = np.mean(np.divide(diag,prec_denom))
+		prec_denom = np.sum(prec_denom[mask])
+
+		precision = diag/prec_denom
+
+		# Compute accuracy
+		acc = np.sum(CM.diagonal())/np.sum(CM, axis=None)
 
 		# F1 measure (F-score with beta=1)
 		F1 = 2*precision*recall/(precision+recall)
