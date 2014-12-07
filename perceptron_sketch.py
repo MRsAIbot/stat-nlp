@@ -206,11 +206,12 @@ def train_perceptron(FV, training_files, T_max = 1, LR = 1.0, mode = 'Trigger', 
  
 
 
-if 1:
+if 0:
     #Argument prediction
     FV_arg = feature_vector.FeatureVector('argument')
     train,valid = utils.create_training_and_validation_file_lists(ratio = 0.75, load=True)    
-    Lambda2, misclassification_rates2 = train_perceptron(FV_arg, train, T_max = 20, LR = 10.0, mode='Argument')   
+    Lambda2, misclassification_rates2 = train_perceptron(FV_arg, train, T_max = 20, 
+                                                         LR = 10.0, mode='Argument', subs_rate=0.8)   
     plt.plot(misclassification_rates2)
 
     (y_hat, y) = test_perceptron(FV_arg, Lambda2, valid, mode='Argument')
@@ -219,11 +220,16 @@ if 1:
     print (validation_error)
     utils.evaluate(y, y_hat, FV_arg, mode = 'Arguments')
 
-    savedata = (Lambda2,misclassification_rates2)
-    with open('perceptron_argument.data', 'wb') as f:
-        cPickle.dump(savedata, f)  
-    with open('perceptron_argument.data', 'rb') as f:
-        LLambda = cPickle.load(f)
+    savedata2 = (Lambda2,misclassification_rates2)
+    with open('perceptron_argumentbb.data', 'wb') as f:
+        cPickle.dump(savedata2, f)  
+    with open('perceptron_argumentbb.data', 'rb') as f:
+        (LLambda2, misc2) = cPickle.load(f)
+        
+    with open('perceptron_argument_predictionsbb.data', 'wb') as f: 
+        cPickle.dump((y_hat, y), f)
+    with open('perceptron_argument_predictionsbb.data', 'rb') as f:
+        (yy_hat2, yy2) = cPickle.load(f) 
 
 
 if 0:
@@ -256,7 +262,7 @@ if 0:
     
 if 0:
     plt.figure(2)
-    plt.plot(np.transpose(Lambda))
+    plt.plot(np.transpose(Lambda2))
     #plt.plot(np.transpose(Lambda)[-100:,:])
     #plt.xticks(range(len(symbols_list)), symbols_list, size='small')
     #plt.show()
