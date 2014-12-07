@@ -5,7 +5,7 @@ This is a repository for the homework assignments of Statistical Natural Languag
 
 To run
 ------------------
-For a short demonstration, run the following command
+First, make sure that the directory `bionlp2011genia-train-clean` is in the same directory as `assignment2.py`. For a short demonstration, run the following command
 ```
 python assignment2.py
 ```
