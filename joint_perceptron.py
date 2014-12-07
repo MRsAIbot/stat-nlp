@@ -18,18 +18,16 @@ import cPickle
 
 
 
-
-#first subsample a set of event candidates with lower rate of 'None' triggers
-#then also subsample the argument candidates.
+# Joint subsampling for triggers and arguments.
+# first subsample a set of event candidates with lower rate of 'None' triggers
+# second also subsample the argument candidates of remaining events.
 def subsample_jointly(feature_tuples, gold_tuples, rate_trig, rate_arg):
     
     None_trig_indices = [i for (i,trigger) in enumerate(gold_tuples) if trigger[0] == u'None']
-
     All_other_trig_indices = range(len(gold_tuples))
     for n_i in None_trig_indices:
         All_other_trig_indices.remove(n_i)
 
-    
     N = len(None_trig_indices)
     N_pick = np.floor((1.0 - rate_trig) * N)
 
@@ -45,7 +43,6 @@ def subsample_jointly(feature_tuples, gold_tuples, rate_trig, rate_arg):
     subsampled_feature_tuples = [feature_tuples[i] for i in remaining_entries ]
     subsampled_gold_tuples = [gold_tuples[i] for i in remaining_entries ]
 
-
     #Now subsample the argument candidates within each remaining event candidate
     final_f_tuples = []
     final_g_tuples = []
@@ -54,11 +51,11 @@ def subsample_jointly(feature_tuples, gold_tuples, rate_trig, rate_arg):
         m = len(g_tuple[1])
         None_arg_indices = []
         All_other_indices = range(m)
+        
         for j in range(m):
             if g_tuple[1][j] == u'None':
                 All_other_indices.remove(j)
                 None_arg_indices += [j]
-        
                 
         N = len(None_arg_indices)
         N_pick = np.floor((1.0 - rate_arg) * N)
@@ -82,15 +79,7 @@ def subsample_jointly(feature_tuples, gold_tuples, rate_trig, rate_arg):
 
 
 
-
-
-
-
-
-
-
-
-#predict function for perceptron
+# prediction function for joint perceptron, using constraints
 def predict_under_constraint(feature_matrix, Lambda, allowed_classes, 
                              return_scores = False):
     scores = []
@@ -105,14 +94,15 @@ def predict_under_constraint(feature_matrix, Lambda, allowed_classes,
         return predicted_class, scores
 
 
+
 # which argument is cheapest to switch to 'Theme' [we need at least one!]?
+# return old v if one argument was 'Theme' already: no change.
 def enforce_one_Theme(v, scores, Theme_argument):
     Theme_responses = [s[Theme_argument] for s in scores]
     if not u'Theme' in Theme_responses:
         Delta = []
         for j in range(len(v)):
             #check score difference between 'Theme' and unconstr. prediction
-            #Delta_j = scores[j][Theme_argument] - scores[j][v[j]]
             Delta_j = scores[j][v[j]] - scores[j][Theme_argument] 
             Delta += [Delta_j]
         try:
@@ -120,10 +110,11 @@ def enforce_one_Theme(v, scores, Theme_argument):
             v[convert] = Theme_argument
         except Exception, _:
             pass
-    return v    #return old v if one argument was'Theme' already: no change.
+    return v    
 
 
-#returns score of one particular combination of event and argument labels   
+# returns score of one particular combination of event and argument labels,
+# fully factorised case.
 def total_score_joint(X_trigger, Lambda_trigger, X_arguments, Lambda_argument,
                 event, arguments):
     
@@ -140,7 +131,8 @@ def total_score_joint(X_trigger, Lambda_trigger, X_arguments, Lambda_argument,
     return s_e + s_a
 
 
-
+# This function executes the argmax search in the constrained joint perceptron
+# as described in Exercise 3.
 def argmax_joint_constrained(X_trig, Lambda_trig, X_arg, Lambda_arg, FV):
     
     None_trigger = FV.trigger_list.index(u'None')
@@ -153,19 +145,17 @@ def argmax_joint_constrained(X_trig, Lambda_trig, X_arg, Lambda_arg, FV):
     a_1 = [None_argument]*len(X_arg)
     s1 = total_score_joint(X_trig, Lambda_trig, X_arg, Lambda_arg, e_1, a_1)
                      
-                     
 
     #COMPUTE s2: ONLY Regulation triggers are allowed
-    #identify the trigger indices for regulation events [also pos/neg-regul.]
+    #identify the trigger indices for regulation events
     Regulation_triggers = [i for i in range(len(FV.trigger_list)) \
-                           if 'egulation' in FV.trigger_list[i]]
+                               if 'egulation' in FV.trigger_list[i]]
     legal_triggers = Regulation_triggers
-
     e_2 = predict_under_constraint(X_trig, Lambda_trig, legal_triggers)
     a_2 = []
     scores = []
     for j in range(len(X_arg)):
-        #generate free predictions, might so far miss a Theme argument 
+        #generate unconstrained predictions, might so far miss a Theme argument 
         a_j, sco = predict_under_constraint(X_arg[j], Lambda_arg, range(3), 
                                                 return_scores = True) 
         a_2  += [ a_j ]
@@ -176,16 +166,14 @@ def argmax_joint_constrained(X_trig, Lambda_trig, X_arg, Lambda_arg, FV):
     s2 = total_score_joint(X_trig, Lambda_trig, X_arg, Lambda_arg, e_2, a_2 )
 
     
-    
-    #COMPUTE s3: no regulation [also pos/neg regul.] triggers or None trigger
-    #allowed. Restrict possible argument labels to None and Theme [skip Cause].
+    #COMPUTE s3: no regulation triggers or None trigger allowed.
+    #Restrict possible argument labels to 'None' and 'Theme' [--> skip 'Cause']
     legal_triggers = range(10)
     for r in Regulation_triggers:
         legal_triggers.remove(r)
     legal_triggers.remove(None_trigger)
     e_3 = predict_under_constraint(X_trig, Lambda_trig, legal_triggers)
     
-    #argument & scores: Cause arguments not allowed
     legal_arglabels = range(3)
     legal_arglabels.remove(Cause_argument)
     
@@ -200,7 +188,7 @@ def argmax_joint_constrained(X_trig, Lambda_trig, X_arg, Lambda_arg, FV):
     s3 = total_score_joint(X_trig, Lambda_trig, X_arg, Lambda_arg, e_3, a_3 )
     
     
-    #Compare s1,s2,s3. Identify highest scoring case; return its parameters
+    #Compare s1,s2,s3. Identify final highest scoring case; return its parameters
     best_score = [s1,s2,s3].index(max([s1,s2,s3]))
     if best_score == 0:
         return (e_1, a_1)
@@ -209,9 +197,8 @@ def argmax_joint_constrained(X_trig, Lambda_trig, X_arg, Lambda_arg, FV):
     else:
         return (e_3, a_3)
     
-        
-
-
+    
+# prediction function to be called when training the joint perceptron.
 def predict_joint(X_trigger, Lambda_trigger, X_arguments, Lambda_argument, mode):
     """
     e: event trigger [10 possible event triggers]
@@ -234,10 +221,8 @@ def predict_joint(X_trigger, Lambda_trigger, X_arguments, Lambda_argument, mode)
         warnings.warn(' ### Problem in predict_joint: mode must be either ' \
                         + '"constrained" or "unconstrained". ###')
         
-    
-    
-             
-    
+          
+# assembling the feature matrices for all events in one file.
 def build_joint_data_batch(file_name, FV, subsample = True):
     gold_list = []
     feature_matrix_list = []   #list of feature matrices for both trigger & argument
@@ -281,7 +266,7 @@ def build_joint_data_batch(file_name, FV, subsample = True):
     return (feature_matrix_list, gold_list)
 
 
-# create predictions for test set
+# create joint perceptron predictions on a test set
 def test_perceptron_joint(FV, Lambda_trig, Lambda_arg, file_list, mode, subsample = False):
     #Test data from all files in file_list
     feature_list = []
@@ -291,14 +276,6 @@ def test_perceptron_joint(FV, Lambda_trig, Lambda_arg, file_list, mode, subsampl
         (feat_list_one_file, gold_list_one_file) = build_joint_data_batch(file_name, FV, subsample)
         feature_list += feat_list_one_file
         gold_list += gold_list_one_file
-
-    """
-    if subsample:
-        print '###################################'
-        print 'Nones before subsampling', gold_list.count(u'None'), 'of', len(gold_list)
-        feature_list, gold_list = subsample(feature_list, gold_list, subsampling_rate = 0.95)    
-        print 'Nones after subsampling', gold_list.count(u'None'), 'of',len(gold_list)
-    """
 
     predictions_e = []    
     predictions_a = []
@@ -325,7 +302,7 @@ def test_perceptron_joint(FV, Lambda_trig, Lambda_arg, file_list, mode, subsampl
     return predictions_e, gold_e, predictions_a, gold_a
 
 
-
+# Training routine for joint perceptron model
 def train_perceptron_joint(FV, training_files, T_max = 1, LR = 1.0, 
                            mode = 'Joint_unconstrained', plot = True):
     if mode == 'Joint_unconstrained' or mode == 'Joint_constrained':
@@ -347,10 +324,8 @@ def train_perceptron_joint(FV, training_files, T_max = 1, LR = 1.0,
         feature_list += feat_list_one_file
         gold_list += gold_list_one_file
     
-    #feature_list, gold_list = perceptron.subsample(feature_list, gold_list, subsampling_rate = 0.95)    
     N_classes_trigger, N_dims_trigger = feature_list[0][0].shape
     N_classes_argument, N_dims_argument = feature_list[0][1][0].shape
-    
     N_samples = len(feature_list)
 
     #initialise parameters
@@ -415,14 +390,9 @@ def train_perceptron_joint(FV, training_files, T_max = 1, LR = 1.0,
         plt.legend()
     return Lambda_trigger, Lambda_argument, misclassification_rates_t, misclassification_rates_a
  
-
-
-
-
-
-#BEFORE RUNNING: make all if 0: in perceptron_sketch because it is imported.
-            
-            
+ 
+ 
+ 
             
 if 0:
     #joint prediction
@@ -437,11 +407,11 @@ if 0:
                                                 mode = 'Joint_constrained', 
                                                 subsample = False)
     
-    
+    #save results
     savedata = (L_t, L_a, misc_t ,misc_a)
-    with open('Joint_perceptron.data', 'wb') as f:
+    with open('Joint_perceptron_.data', 'wb') as f:
         cPickle.dump(savedata, f)  
-    with open('Joint_perceptron.data', 'rb') as f:
+    with open('Joint_perceptron_.data', 'rb') as f:
         (L_t2, L_a2, misc_t2 ,misc_a2) = cPickle.load(f)
     
     #evaluate trigger predictions
@@ -458,20 +428,12 @@ if 0:
     print 'Argument prediction error (accuracy)',(validation_error_a)
     utils.evaluate(gg_a, pp_a, FV, mode = 'Arguments')
     
-    with open('Joint_perceptron_predictions_e.data', 'wb') as f:
+    #save predictions
+    with open('Joint_perceptron_predictions_e_.data', 'wb') as f:
         cPickle.dump((p_e,g_e), f)      
-    with open('Joint_perceptron_predictions_a.data', 'wb') as f:
+    with open('Joint_perceptron_predictions_a_.data', 'wb') as f:
         cPickle.dump((p_a,g_a), f)  
-    with open('Joint_perceptron_predictions_e.data', 'rb') as f:
+    with open('Joint_perceptron_predictions_e_.data', 'rb') as f:
         (p_e2,g_e2) = cPickle.load(f)
-    with open('Joint_perceptron_predictions_a.data', 'rb') as f:
+    with open('Joint_perceptron_predictions_a_.data', 'rb') as f:
         (p_a2,g_a2) = cPickle.load(f)
-
-
-    
-if 0:
-    plt.figure(2)
-    plt.subplot(211)
-    plt.plot(np.transpose(L_t))
-    plt.subplot(212)
-    plt.plot(np.transpose(L_a))

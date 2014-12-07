@@ -5,16 +5,13 @@ import utils
 import inspect
 
 """
-Class template for feature vectors. f(x,c)
-Extending the dictionary class to return 0 if one tries to acceess a feature vector for a missing key.
-An alternative implementation is commented below in case the method of extending the dict class is not adequate.
+Class for feature vectors.
 """
+
 class FeatureVector():
-    # this extended dictionary class is initialised by passing a list of functions to it. These are then assigned as dictionary items upon init.
     def __init__(self, mode = 'argument'):
         if mode not in ['argument', 'trigger', 'joint']:
             print 'ERROR, wrong mode of calling FeatureVector class! '
-
         
         #get handles to all phi functions
         self.methods = inspect.getmembers(self, predicate=inspect.ismethod)  
@@ -25,7 +22,6 @@ class FeatureVector():
             self.phi_list_arg = [method[1] for method in self.methods if 'phi_argument' in method[0]]
             self.phi_list_trig = [method[1] for method in self.methods if 'phi_trigger' in method[0]]
             
-        
         #load relevant other data from presaved files.
         self.listOfAllFiles = utils.list_files()
         self.all_grammar_tags = utils.get_grammar_tag_list()
@@ -35,13 +31,12 @@ class FeatureVector():
         self.mod_list_triggers = utils.create_mod_list_trigger(cutoff = 25, load=True)        
         self.arguments_list = [u'None', u'Theme', u'Cause']
 
-
         self.dep_list_total = utils.identify_all_dep_labels(load = True)
         self.trig2arg_deps = utils.create_dep_list_trig2arg(cutoff = 2, load = True)
 
 
     #Feature matrix for trigger prediction
-    def get_feature_matrix(self, token_index, sentence, clf = 'perc'):
+    def get_feature_matrix(self, token_index, sentence):
         col_indices = []
         values = []
         n_classes = 10  #length of list of all occurring triggers in dataset.
@@ -67,7 +62,6 @@ class FeatureVector():
             all_row_indices += [c]*len(values)       
             all_col_indices += col_indices
             all_values += values        
-         
         
         sparse_feature_matrix = coo_matrix((np.array(all_values), 
                                            (np.asarray(all_row_indices),
@@ -92,8 +86,6 @@ class FeatureVector():
         else:
             print 'ERROR: WRONG USE OF FUNCTION get_feature_matrix_argument_prediction()'
          
-            
-        
         for phi in phi_list:
                 phi_vector = phi(token_index, arg_index, sentence)
                 index = list(np.nonzero(np.array(phi_vector))[0])

@@ -27,12 +27,15 @@ def load_json_file(file_name):
 		return d
 
 
+# compute precision, treating the none event differently
 def precision(Confusion_matrix, None_label):
     numerator = np.sum(Confusion_matrix.diagonal()) - Confusion_matrix[None_label,None_label]
     denominator = np.sum(np.delete(Confusion_matrix, None_label, 1))
     precision = numerator/float(denominator)
     return precision
 
+
+# compute recall, treating the none event differently
 def recall(Confusion_matrix, None_label):
     numerator = np.sum(Confusion_matrix.diagonal()) - Confusion_matrix[None_label,None_label]
     denominator = np.sum(np.delete(Confusion_matrix, None_label, 0))
@@ -40,6 +43,7 @@ def recall(Confusion_matrix, None_label):
     return recall
     
     
+# generic evaluation function for predictions.    
 def evaluate(y_gold, y_pred, FV, mode):
     if mode == 'Trigger':
         C = len(FV.trigger_list)
@@ -59,9 +63,9 @@ def evaluate(y_gold, y_pred, FV, mode):
     print "F1-score:", F1
     return p,r,F1
     
-
+    
+# computes a confusion matrix for gold and predicted labels. C = #classes
 def get_confusion_matrix(y_gold, y_pred, C):
-    """ rows: gold labels; columns: predicted labels"""
     Confusion = np.zeros([C, C], dtype = np.int64)
     
     for gold in range(C):
@@ -75,7 +79,7 @@ def get_confusion_matrix(y_gold, y_pred, C):
     return Confusion
 
 
-# Returns a dictionary with a count of all triggers
+# Returns a dictionary with a count for all triggers
 def get_all_triggers(file_list):
 	trigger_dict = defaultdict(int)
 	for f in file_list:
@@ -87,7 +91,8 @@ def get_all_triggers(file_list):
 
 	return trigger_dict
  
-
+ 
+# Returns a list with all triggers encountered in the data set.
 def get_trigger_list(load = True):
     if load:
         with open('trigger_list.data', 'rb') as f:
@@ -103,9 +108,7 @@ def get_trigger_list(load = True):
     return trigger_list
      
  
- 
- 
-#Returns a dictionary with a count of all arguments (=labels of the relations)
+# Returns a dictionary with a count for all argument labels [None, Theme, Cause]
 def get_all_arguments(file_list):
     argument_dict = defaultdict(int)
     for f in file_list:
@@ -120,11 +123,8 @@ def get_all_arguments(file_list):
     return argument_dict
     
 
-
-
-# Identify all possible types of grammatical objects occuring in the dataset.
-# Return list of all possible objects: 'NN' 'VP', etc. --> ['NN', 'VP', ...]
-#file_list = assignment2.listFiles()
+# return a list of all part of speech tags encountered in the data set.
+# grammar tags in this context are pos tags.
 def identify_all_grammar_tags(file_list):   
     grammar_dict = defaultdict(int)
     for f in file_list:
@@ -146,6 +146,7 @@ def identify_all_grammar_tags(file_list):
     return grammar_dict
 
 
+# identifying all part-of-speech (pos)tags, which we here name grammar tags.
 def get_grammar_tag_list(load = True):
     if load:
         with open('grammar_tags_list.data', 'rb') as f:
@@ -161,7 +162,7 @@ def get_grammar_tag_list(load = True):
     return gt_list
     
     
-
+# identifying argument word stems
 def identify_typical_argument_word_stems():
     file_list = list_files()
     stem_dict = defaultdict(int)
@@ -182,8 +183,8 @@ def identify_typical_argument_word_stems():
                     stem_dict[argument['gold']][stem] +=1
     return stem_dict    
     
-
-
+    
+# create list of most common argument word stems
 def create_stem_list_arguments(cutoff = 5, load = True):
     if load == True:
         print ('Loading stem-list from file.')
@@ -208,8 +209,7 @@ def create_stem_list_arguments(cutoff = 5, load = True):
     return stem_list
 
 
-
-    
+# identify the most common word stems of trigger events.
 def identify_typical_trigger_word_stems():
     file_list = list_files()
     stem_dict = defaultdict(int)
@@ -228,6 +228,7 @@ def identify_typical_trigger_word_stems():
     return stem_dict
 
 
+# identify all dependency labels that occurr in the whole data set.
 def identify_all_dep_labels(return_as_list = True, load = True):
     if load:
         with open('dep_list_total.data', 'rb') as f:
@@ -253,6 +254,7 @@ def identify_all_dep_labels(return_as_list = True, load = True):
         return dep_dict
  
  
+# identify most common trigger to argument dependencies
 def identify_typical_trigger_argument_deps():
     file_list = list_files()
     dep_dict = defaultdict(int)
@@ -276,6 +278,7 @@ def identify_typical_trigger_argument_deps():
     return dep_dict
 
 
+# return most common trigger to argument dependencies
 def create_dep_list_trig2arg(cutoff = 2, load = False):
     if load:
         with open('trig2arg_deps.data', 'rb') as f:
@@ -295,7 +298,8 @@ def create_dep_list_trig2arg(cutoff = 2, load = False):
             cPickle.dump(trig2arg_deps, f)
         return trig2arg_deps
 
- 
+
+# identify most common trigger stems, return them in list
 def create_stem_list_trigger(cutoff = 5, load = True):
     if load == True:
         print ('Loading stem-list from file.')
@@ -320,58 +324,9 @@ def create_stem_list_trigger(cutoff = 5, load = True):
     return stem_list
 
 
-
-"""
-def identify_typical_trigger_word_mods():
-    file_list = list_files()
-    mod_dict = defaultdict(int)
-    triggers = list(get_all_triggers(file_list) )
-    for trigger in triggers:
-        mod_dict[trigger] = defaultdict(int)
-        
-    for f in file_list:
-        f_json = load_json_file(f)
-        for sentence in f_json['sentences']:
-            eventCandidates = sentence['eventCandidates']
-            for ec in eventCandidates:
-                index = ec['begin']
-                for dep in sentence['deps']:
-                    if dep['head'] == index:
-                        mod = dep['mod']
-                        mod_dict[ec['gold']][mod] +=1
-    return mod_dict
-"""
-
-"""
-def create_mod_list_trigger(cutoff = 5, load = True):
-    if load == True:
-        print ('Loading mod-list from file.')
-        with open('mod_list_trigger.data', 'rb') as f:
-            loaded = cPickle.load(f)
-            mod_list = correct_end_of_lines_in_saved_list(loaded)
-    else:
-        print ('Computing mod-list')
-    sd = identify_typical_trigger_word_mods()
-    mod_list = []
-    for key in sd.keys()[1:]:
-        counts = sd[key]
-        for ckey in counts.keys():
-            if counts[ckey] > cutoff:
-                mod_list += [ckey]
-                
-    #get rid of double elements
-    mod_list = list(set(mod_list))
-    #save to file.
-    with open('stem_mod_trigger.data', 'wb') as f:
-        cPickle.dump(mod_list, f)
-    return mod_list
-
-"""
-
-
+#computes random permutation of files and splits it into training and test set.
 def create_training_and_validation_file_lists(ratio = 0.75, load = True):
     #ratio determines the ratio between training and validation set size
-
     if load == True:    #load previously saved splitting into train-valid sets
         print 'Loading predetermined training/validation splitting from file.'
         f = open('training_validation_files',"rb")
@@ -393,14 +348,10 @@ def create_training_and_validation_file_lists(ratio = 0.75, load = True):
         f = open('training_validation_files',"w")
         cPickle.dump(savedata, f)
         f.close()
-
-    
     return training_files, validation_files
     
    
-    
-    
-    
+# function to remove automatically appended \r line endings 
 def correct_end_of_lines_in_saved_list(input_list):
     output_list = []
     for element in input_list:
@@ -410,8 +361,9 @@ def correct_end_of_lines_in_saved_list(input_list):
             output_list += [element]  
     return output_list
     
-    
 
+# creates a dictionary with for each trigger label: a list of words and counts
+# of how often this word is head of a dependency with the trigger as mod.
 def identify_typical_trigger_word_mods(return_as_list = True, load = True):
     if load:
         with open('mod_list_total.data', 'rb') as f:
@@ -441,7 +393,8 @@ def identify_typical_trigger_word_mods(return_as_list = True, load = True):
         return mod_dict    
     
     
-    
+# returns most frequent words for which there is a dependency between trigger
+# and the word, in which trigger is the mod.
 def create_mod_list_trigger(cutoff = 5, load = True):
     if load == True:
         print ('Loading mod-list from file.')
@@ -462,9 +415,4 @@ def create_mod_list_trigger(cutoff = 5, load = True):
         with open('stem_mod_trigger.data', 'wb') as f:
             cPickle.dump(mod_list, f)
     return mod_list
-    
-    
-
-    
-    
     

@@ -3,6 +3,11 @@
 Created on Sat Nov 22 23:18:03 2014
 
 @author: Johannes
+
+This is the major file for running the structured perceptron algorithm for 
+either trigger or argument prediction. It contains functions to train and test
+the perceptron, along with functions to assemble features from each input,
+and a function for subsampling None events.
 """
 
 import numpy as np
@@ -15,7 +20,7 @@ import warnings
 import cPickle
 
 
-#subsample the >None< events, to obtain more balanced data set.
+#subsample the >None< events, to obtain a more balanced data set.
 def subsample(feature_list, trigger_list, subsampling_rate = 0.9):
     
     None_indices = [i for (i,trigger) in enumerate(trigger_list) if trigger == u'None']
@@ -24,7 +29,7 @@ def subsample(feature_list, trigger_list, subsampling_rate = 0.9):
     
     N = len(None_indices)
     N_pick = np.floor((1.0 - subsampling_rate) * N)
-    #N_pick = len(All_other_indices)
+    #N_pick = len(All_other_indices)    #alternative
     
     #now pick N_pick random 'None' samples among all of them.
     random_indices = np.floor(np.random.uniform(0, N , N_pick) )    
@@ -84,9 +89,8 @@ def build_argument_data_batch(file_name, FV):
     return matrix_list, gold_list
    
     
-# create predictions for test set
+# create predictions for test set. Test data is all data from files in file_list
 def test_perceptron(FV, Lambda, file_list, mode, subsample = False):
-    #Test data from all files in file_list
     feature_list = []
     gold_list = []
     for i_f, filename in enumerate(file_list):
@@ -122,7 +126,7 @@ def test_perceptron(FV, Lambda, file_list, mode, subsample = False):
     return predictions, gold_labels
         
         
-#predict function for perceptron
+#predict function for perceptron algorithm. Returns highest scoring class
 def predict(feature_matrix, Lambda, return_scores = False):
     #feature matrix: rows - classes; columns - feature dimensions
     scores = []
@@ -137,6 +141,7 @@ def predict(feature_matrix, Lambda, return_scores = False):
         return predicted_class
 
 
+#call this for training perceptron, either in trigger or argument mode.
 def train_perceptron(FV, training_files, T_max = 1, LR = 1.0, mode = 'Trigger', subs_rate = 0.8):
     t_start = time.time()
     N_files = len(training_files)
@@ -146,7 +151,6 @@ def train_perceptron(FV, training_files, T_max = 1, LR = 1.0, mode = 'Trigger', 
     gold_list = []
     for i_f, filename in enumerate(training_files):
         print 'Building training data from json file ',i_f
-
         if mode == 'Trigger':
             (feat_list_one_file, gold_list_one_file) = build_trigger_data_batch(filename, FV)
         elif mode == 'Argument':
@@ -155,12 +159,11 @@ def train_perceptron(FV, training_files, T_max = 1, LR = 1.0, mode = 'Trigger', 
         feature_list += feat_list_one_file
         gold_list += gold_list_one_file
     
-    print '###################################'
     print 'Nones before subsampling', gold_list.count(u'None'), 'of', len(gold_list)
     if mode == 'Trigger':
         feature_list, gold_list = subsample(feature_list, gold_list, subs_rate)    
     elif mode == 'Argument':
-        feature_list, gold_list = subsample(feature_list, gold_list, subsampling_rate = 0.95)    
+        feature_list, gold_list = subsample(feature_list, gold_list, subsampling_rate = subs_rate)    
     print 'Nones after subsampling', gold_list.count(u'None'), 'of',len(gold_list)
 
     N_classes, N_dims = feature_list[0].shape
@@ -186,11 +189,11 @@ def train_perceptron(FV, training_files, T_max = 1, LR = 1.0, mode = 'Trigger', 
             
             y_hat = predict(X, Lambda)
             if not sample % 50:
-                print 'it',iteration, sample, 'of', N_samples,'Predict:', y, 'True:', y_hat
+                print 'it',iteration, sample, 'of', N_samples,'Predict:', y_hat, 'Gold:', y
             if y_hat != y:
                 Delta = np.zeros([N_classes, N_dims])
-                Delta[y_hat, :] = -LR*X.getrow(y_hat).todense() 
-                Delta[y , :]  =  LR*X.getrow(y).todense() 
+                Delta[y_hat, :] = - LR * X.getrow(y_hat).todense() 
+                Delta[y , :]  =  LR * X.getrow(y).todense() 
 
                 Lambda_New = np.add(Lambda, Delta)
                 Lambda = Lambda_New
@@ -198,7 +201,6 @@ def train_perceptron(FV, training_files, T_max = 1, LR = 1.0, mode = 'Trigger', 
                 misclassified +=1
             else:
                 pass #prediction correct, no change.
-        print misclassified
         misclassification_rates += [ float(misclassified)/float(N_samples) ]
         
     print time.time()-t_start, 'sec for', N_files, 'Files and', T_max, 'epochs.'
@@ -228,7 +230,7 @@ if 0:
         
     with open('perceptron_argument_predictionsbb.data', 'wb') as f: 
         cPickle.dump((y_hat, y), f)
-    with open('perceptron_argument_predictionsbb.data', 'rb') as f:
+    with open('perceptron_argument_predictions.data', 'rb') as f:
         (yy_hat2, yy2) = cPickle.load(f) 
 
 
@@ -259,13 +261,6 @@ if 0:
         (yy_hat, yy) = cPickle.load(f) 
 
     
-    
-if 0:
-    plt.figure(2)
-    plt.plot(np.transpose(Lambda2))
-    #plt.plot(np.transpose(Lambda)[-100:,:])
-    #plt.xticks(range(len(symbols_list)), symbols_list, size='small')
-    #plt.show()
     
     
     
