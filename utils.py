@@ -351,13 +351,13 @@ def create_mod_list_trigger(cutoff = 5, load = True):
             mod_list = correct_end_of_lines_in_saved_list(loaded)
     else:
         print ('Computing mod-list')
-    sd = identify_typical_trigger_word_mods()
-    mod_list = []
-    for key in sd.keys()[1:]:
-        counts = sd[key]
-        for ckey in counts.keys():
-            if counts[ckey] > cutoff:
-                mod_list += [ckey]
+        sd = identify_typical_trigger_word_mods()
+    	mod_list = []
+        for key in sd.keys()[1:]:
+            counts = sd[key]
+            for ckey in counts.keys():
+                if counts[ckey] > cutoff:
+                    mod_list += [ckey]
                 
     #get rid of double elements
     mod_list = list(set(mod_list))
