@@ -259,15 +259,3 @@ if 0:
         cPickle.dump((y_hat, y), f)
     with open('perceptron_trigger_predictions.data', 'rb') as f:
         (yy_hat, yy) = cPickle.load(f) 
-
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    

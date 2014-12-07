@@ -58,3 +58,4 @@ target/
 
 # Data file
 bionlp2011genia-train-clean/
+*.data
