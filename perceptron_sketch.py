@@ -223,7 +223,7 @@ if 0:
     savedata2 = (Lambda2,misclassification_rates2)
     with open('perceptron_argumentbb.data', 'wb') as f:
         cPickle.dump(savedata2, f)  
-    with open('perceptron_argumentbb.data', 'rb') as f:
+    with open('perceptron_argument.data', 'rb') as f:
         (LLambda2, misc2) = cPickle.load(f)
         
     with open('perceptron_argument_predictionsbb.data', 'wb') as f: 
@@ -244,7 +244,7 @@ if 0:
     savedata = (Lambda,misclassification_rates)
     with open('perceptron_triggeraa.data', 'wb') as f:
         cPickle.dump(savedata, f)  
-    with open('perceptron_triggeraa.data', 'rb') as f:
+    with open('perceptron_triggerdd.data', 'rb') as f:
         (LLambda, misc_trig) = cPickle.load(f)  
 
     (y_hat, y) = test_perceptron(FV_trig, Lambda, valid, mode='Trigger')

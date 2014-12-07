@@ -115,9 +115,11 @@ def enforce_one_Theme(v, scores, Theme_argument):
             #Delta_j = scores[j][Theme_argument] - scores[j][v[j]]
             Delta_j = scores[j][v[j]] - scores[j][Theme_argument] 
             Delta += [Delta_j]
-            
-        convert = Delta.index(min(Delta))
-        v[convert] = Theme_argument
+        try:
+            convert = Delta.index(min(Delta))
+            v[convert] = Theme_argument
+        except Exception, _:
+            pass
     return v    #return old v if one argument was'Theme' already: no change.
 
 
@@ -139,7 +141,7 @@ def total_score_joint(X_trigger, Lambda_trigger, X_arguments, Lambda_argument,
 
 
 
-def argmax_joint_unconstrained(X_trig, Lambda_trig, X_arg, Lambda_arg, FV):
+def argmax_joint_constrained(X_trig, Lambda_trig, X_arg, Lambda_arg, FV):
     
     None_trigger = FV.trigger_list.index(u'None')
     None_argument = FV.arguments_list.index(u'None')
@@ -224,7 +226,7 @@ def predict_joint(X_trigger, Lambda_trigger, X_arguments, Lambda_argument, mode)
         return e_hat, a_hat
             
     elif mode == 'Joint_constrained':
-        e_hat, a_hat = argmax_joint_unconstrained(X_trigger, Lambda_trigger, 
+        e_hat, a_hat = argmax_joint_constrained(X_trigger, Lambda_trigger, 
                                                   X_arguments, Lambda_argument, FV)
         return e_hat, a_hat
                                                   
@@ -268,7 +270,7 @@ def build_joint_data_batch(file_name, FV, subsample = True):
         print "before subsampling Arg:", arg_list.count(u'None'), 'of', len(arg_list) 
         
         (feature_matrix_list, gold_list) = subsample_jointly(feature_matrix_list, 
-                                            gold_list, rate_trig=.7, rate_arg=.9)
+                                            gold_list, rate_trig=.95, rate_arg=.95)
                                             
         trig_list = [item[0] for item in gold_list]
         arg_list = [item[1] for item in gold_list]
@@ -422,25 +424,25 @@ def train_perceptron_joint(FV, training_files, T_max = 1, LR = 1.0,
             
             
             
-if 1:
+if 0:
     #joint prediction
     FV_joint = feature_vector.FeatureVector('joint')
     FV = FV_joint
     train,valid = utils.create_training_and_validation_file_lists(ratio = 0.75, load=True)    
 
-    L_t, L_a, misc_t_,misc_a = train_perceptron_joint(FV, train[:5], T_max = 5, 
+    L_t, L_a, misc_t,misc_a = train_perceptron_joint(FV, train, T_max = 20, 
                                             LR = 10.0, mode = 'Joint_constrained')
 
-    (p_e,g_e, p_a, g_a) = test_perceptron_joint(FV, L_t, L_a, valid[:5], 
+    (p_e,g_e, p_a, g_a) = test_perceptron_joint(FV, L_t, L_a, valid, 
                                                 mode = 'Joint_constrained', 
                                                 subsample = False)
     
     
-    savedata = (L_t, L_a)
+    savedata = (L_t, L_a, misc_t ,misc_a)
     with open('Joint_perceptron.data', 'wb') as f:
         cPickle.dump(savedata, f)  
     with open('Joint_perceptron.data', 'rb') as f:
-        LL_t, LL_a = cPickle.load(f)
+        (L_t2, L_a2, misc_t2 ,misc_a2) = cPickle.load(f)
     
     #evaluate trigger predictions
     errors_e = [1 for y1,y2 in zip(p_e, g_e) if y1!=y2]
@@ -456,9 +458,18 @@ if 1:
     print 'Argument prediction error (accuracy)',(validation_error_a)
     utils.evaluate(gg_a, pp_a, FV, mode = 'Arguments')
     
+    with open('Joint_perceptron_predictions_e.data', 'wb') as f:
+        cPickle.dump((p_e,g_e), f)      
+    with open('Joint_perceptron_predictions_a.data', 'wb') as f:
+        cPickle.dump((p_a,g_a), f)  
+    with open('Joint_perceptron_predictions_e.data', 'rb') as f:
+        (p_e2,g_e2) = cPickle.load(f)
+    with open('Joint_perceptron_predictions_a.data', 'rb') as f:
+        (p_a2,g_a2) = cPickle.load(f)
+
 
     
-if 1:
+if 0:
     plt.figure(2)
     plt.subplot(211)
     plt.plot(np.transpose(L_t))
