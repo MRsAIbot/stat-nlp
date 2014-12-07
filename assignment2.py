@@ -11,6 +11,10 @@ from scipy.sparse import vstack
 import naivebayes2 as nb
 import utils
 import warnings
+import joint_perceptron as jnt
+import perceptron_sketch as perceptron
+import time
+
 
 
 # generate one training batch in perceptron algorithm for event triggers. 

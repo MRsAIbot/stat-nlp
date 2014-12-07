@@ -47,35 +47,42 @@ def subsample(feature_list, trigger_list, subsampling_rate = 0.9):
 
 
 
-#generate one training batch in perceptron algorithm for event triggers. 
-#output: For all events in file file_name: the features (matrix) & triggers
-def build_trigger_data_batch(file_name, FV):
+# generate one training batch in perceptron algorithm for event triggers. 
+# output: For all events in file file_name: the features (matrix) & triggers
+def build_trigger_data_batch(file_name, FV, clf):
     trigger_list = []
     token_index_list = []
     sentence_list = []
-    f_json = json.load(open(file_name))
-    
+    f_json = utils.load_json_file(file_name)
+
     for sentence in f_json['sentences']:
         event_candidates_list = sentence['eventCandidates']
         for event in event_candidates_list:
             token_index_list.append( event['begin'] )
             sentence_list.append(sentence)
             trigger_list += [ event['gold'] ]
-    
+
     matrix_list = []
     for token_index,sentence in zip(token_index_list, sentence_list):
-        matrix_list.append( FV.get_feature_matrix(token_index, sentence) )
+        matrix_list.append( FV.get_feature_matrix(token_index, sentence, clf) )
 
-    return matrix_list, trigger_list
+    if len(matrix_list) == 0:
+        return None, None
+    
+    if clf=='perc':
+        return matrix_list, trigger_list
+    elif clf=='nb':
+        return vstack(matrix_list), trigger_list
             
 
-#generate one training batch in perceptron algorithm for argument labels. 
-#output: For all argument candidates in file file_name: 
-#the features (matrix) & gold label of the trigger-argument relation
-def build_argument_data_batch(file_name, FV):
+# generate one training batch in perceptron algorithm for argument labels. 
+# output: For all argument candidates in file file_name: 
+# the features (matrix) & gold label of the trigger-argument relation
+def build_argument_data_batch(file_name, FV, clf):
     gold_list = []
     matrix_list = []
-    f_json = json.load(open(file_name))    
+    f_json = utils.load_json_file(file_name)
+
     for sentence in f_json['sentences']:
         event_candidates_list = sentence['eventCandidates']
         for event in event_candidates_list:
@@ -83,10 +90,16 @@ def build_argument_data_batch(file_name, FV):
             for argument in argumentslist:
                 arg_index = argument['begin']
                 token_index = event['begin'] 
-                matrix_list.append( FV.get_feature_matrix_argument_prediction(token_index, 
-                                                       arg_index, sentence) )
+                matrix_list.append( FV.get_feature_matrix_argument_prediction(token_index, arg_index, sentence, clf) )
                 gold_list.append( argument['gold'] )
-    return matrix_list, gold_list
+
+    if len(matrix_list) == 0:
+        return None, None
+
+    if clf=='perc':
+        return matrix_list, gold_list
+    elif clf=='nb':
+        return vstack(matrix_list), gold_list
    
     
 # create predictions for test set. Test data is all data from files in file_list
@@ -96,9 +109,9 @@ def test_perceptron(FV, Lambda, file_list, mode, subsample = False):
     for i_f, filename in enumerate(file_list):
         print 'Building test data from json file ',i_f , 'of', len(file_list)
         if mode == 'Trigger':
-            (feat_list_one_file, gold_list_one_file) = build_trigger_data_batch(filename, FV)
+            (feat_list_one_file, gold_list_one_file) = build_trigger_data_batch(filename, FV, clf='perc')
         elif mode == 'Argument':
-            (feat_list_one_file, gold_list_one_file) = build_argument_data_batch(filename, FV)
+            (feat_list_one_file, gold_list_one_file) = build_argument_data_batch(filename, FV, clf='perc')
         else:
             warnings.warn('Error in test_perceptron: Must have mode "Trigger" or "Argument"!' )
             
@@ -152,9 +165,9 @@ def train_perceptron(FV, training_files, T_max = 1, LR = 1.0, mode = 'Trigger', 
     for i_f, filename in enumerate(training_files):
         print 'Building training data from json file ',i_f
         if mode == 'Trigger':
-            (feat_list_one_file, gold_list_one_file) = build_trigger_data_batch(filename, FV)
+            (feat_list_one_file, gold_list_one_file) = build_trigger_data_batch(filename, FV, clf='perc')
         elif mode == 'Argument':
-            (feat_list_one_file, gold_list_one_file) = build_argument_data_batch(filename, FV)
+            (feat_list_one_file, gold_list_one_file) = build_argument_data_batch(filename, FV, clf='perc')
         
         feature_list += feat_list_one_file
         gold_list += gold_list_one_file
